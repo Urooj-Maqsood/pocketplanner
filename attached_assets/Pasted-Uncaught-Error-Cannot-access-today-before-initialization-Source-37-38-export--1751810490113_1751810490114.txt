@@ -1,0 +1,252 @@
+Uncaught Error
+Cannot access 'today' before initialization
+Source
+ 
+ 37 |
+ 
+ 38 |
+ 
+export
+ 
+default
+ 
+function
+ 
+TasksScreen
+() {
+>
+ 39 |
+   
+const
+ [tasks
+,
+ setTasks] 
+=
+ useState
+<
+Task
+[]
+>
+([])
+;
+ 
+    |
+                                     
+^
+ 
+ 40 |
+   
+const
+ [timeBlocks
+,
+ setTimeBlocks] 
+=
+ useState
+<
+TimeBlock
+[]
+>
+([])
+;
+ 
+ 41 |
+   
+const
+ [newTaskTitle
+,
+ setNewTaskTitle] 
+=
+ useState(
+''
+)
+;
+ 
+ 42 |
+   
+const
+ [newTaskDeadline
+,
+ setNewTaskDeadline] 
+=
+ useState(
+''
+)
+;
+Call Stack
+TasksScreen
+app/(tabs)/tasks.tsx:58:11
+See 13 more frames
+Component Stack
+TasksScreen
+app/(tabs)/tasks.tsx:39:37
+Suspense
+<anonymous>:-1:0
+Route
+node_modules/expo-router/build/Route.js:30:18
+BaseRoute
+node_modules/expo-router/build/useScreens.js:154:5
+StaticContainer
+node_modules/@react-navigation/core/lib/module/StaticContainer.js:9:16
+EnsureSingleNavigator
+node_modules/@react-navigation/core/lib/module/EnsureSingleNavigator.js:12:3
+SceneView
+node_modules/@react-navigation/core/lib/module/SceneView.js:15:3
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/vendor/react-native/Animated/createAnimatedComponent.js:25:45
+Background
+node_modules/@react-navigation/elements/lib/module/Background.js:8:3
+Screen
+node_modules/@react-navigation/elements/lib/module/Screen.js:13:38
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+MaybeScreen
+node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js:27:3
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+MaybeScreenContainer
+node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js:13:3
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+SafeAreaProviderCompat
+node_modules/@react-navigation/elements/lib/module/SafeAreaProviderCompat.js:30:3
+BottomTabView
+node_modules/@react-navigation/bottom-tabs/lib/module/views/BottomTabView.js:48:5
+PreventRemoveProvider
+node_modules/@react-navigation/core/lib/module/PreventRemoveProvider.js:31:3
+NavigationContent
+node_modules/@react-navigation/core/lib/module/useComponent.js:6:3
+React.useRef$argument_0
+node_modules/@react-navigation/core/lib/module/useComponent.js:22:5
+BottomTabNavigator
+node_modules/@react-navigation/bottom-tabs/lib/module/navigators/createBottomTabNavigator.js:7:3
+<anonymous>
+node_modules/expo-router/build/layouts/withLayoutContext.js:123:63
+AuthWrapper
+components/AuthWrapper.tsx:11:39
+TabLayout
+app/(tabs)/_layout.tsx:13:37
+Suspense
+<anonymous>:-1:0
+Route
+node_modules/expo-router/build/Route.js:30:18
+BaseRoute
+node_modules/expo-router/build/useScreens.js:154:5
+StaticContainer
+node_modules/@react-navigation/core/lib/module/StaticContainer.js:9:16
+EnsureSingleNavigator
+node_modules/@react-navigation/core/lib/module/EnsureSingleNavigator.js:12:3
+SceneView
+node_modules/@react-navigation/core/lib/module/SceneView.js:15:3
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+AnimatedHeaderHeightProvider
+node_modules/@react-navigation/native-stack/lib/module/views/NativeStackView.js:111:3
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/vendor/react-native/Animated/createAnimatedComponent.js:25:45
+Background
+node_modules/@react-navigation/elements/lib/module/Background.js:8:3
+Screen
+node_modules/@react-navigation/elements/lib/module/Screen.js:13:38
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+SafeAreaProviderCompat
+node_modules/@react-navigation/elements/lib/module/SafeAreaProviderCompat.js:30:3
+NativeStackView
+node_modules/@react-navigation/native-stack/lib/module/views/NativeStackView.js:11:3
+PreventRemoveProvider
+node_modules/@react-navigation/core/lib/module/PreventRemoveProvider.js:31:3
+NavigationContent
+node_modules/@react-navigation/core/lib/module/useComponent.js:6:3
+React.useRef$argument_0
+node_modules/@react-navigation/core/lib/module/useComponent.js:22:5
+NativeStackNavigator
+node_modules/@react-navigation/native-stack/lib/module/navigators/createNativeStackNavigator.js:8:3
+<anonymous>
+node_modules/expo-router/build/layouts/withLayoutContext.js:123:63
+ThemeProvider
+node_modules/@react-navigation/core/lib/module/theming/ThemeProvider.js:7:3
+AuthProvider
+contexts/AuthContext.tsx:28:61
+TimerScreen
+app/(tabs)/timer.tsx:263:14
+Suspense
+<anonymous>:-1:0
+Route
+node_modules/expo-router/build/Route.js:30:18
+BaseRoute
+node_modules/expo-router/build/useScreens.js:154:5
+StaticContainer
+node_modules/@react-navigation/core/lib/module/StaticContainer.js:9:16
+EnsureSingleNavigator
+node_modules/@react-navigation/core/lib/module/EnsureSingleNavigator.js:12:3
+SceneView
+node_modules/@react-navigation/core/lib/module/SceneView.js:15:3
+PreventRemoveProvider
+node_modules/@react-navigation/core/lib/module/PreventRemoveProvider.js:31:3
+NavigationContent
+node_modules/@react-navigation/core/lib/module/useComponent.js:6:3
+React.useRef$argument_0
+node_modules/@react-navigation/core/lib/module/useComponent.js:22:5
+Content
+node_modules/expo-router/build/ExpoRoot.js:148:88
+div
+<anonymous>:-1:0
+React.forwardRef$argument_0
+node_modules/react-native-web/dist/exports/View/index.js:35:25
+buildGraph
+node_modules/color-convert/route.js:16:2
+convert.hcg.rgb
+node_modules/color-convert/conversions.js:716:2
+wrapper
+node_modules/expo-router/build/ExpoRoot.js:70:24
+ThemeProvider
+node_modules/@react-navigation/core/lib/module/theming/ThemeProvider.js:7:3
+EnsureSingleNavigator
+node_modules/@react-navigation/core/lib/module/EnsureSingleNavigator.js:12:3
+BaseNavigationContainer
+node_modules/@react-navigation/core/lib/module/BaseNavigationContainer.js:72:3
+NavigationContainerInner
+node_modules/expo-router/build/fork/NavigationContainer.js:32:37
+ContextNavigator
+node_modules/expo-router/build/ExpoRoot.js:89:29
+ExpoRoot
+node_modules/expo-router/build/ExpoRoot.js:64:30
+_HelmetProvider
+https://f8e01538-b2b4-4d1d-923c-25c83c8cb30e-00-c5wtsx7t9rbc.sisko.replit.dev/node_modules/expo-router/entry.bundle
+App
+<anonymous>:-1:0
+LogBoxStateSubscription#constructor
+node_modules/@expo/metro-runtime/src/error-overlay/Data/LogBoxData.tsx:365:7
+ErrorOverlay
+<anonymous>:-1:0
+withDevTools(ErrorOverlay)
+<anonymous>:-1:0
+AppContainer
+shim:react-native-web/dist/exports/AppRegistry/AppContainer.js
+Collapse 68 frames
