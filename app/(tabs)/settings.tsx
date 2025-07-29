@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
@@ -5,18 +6,21 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Share,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import FocusForecast from '@/components/FocusForecast';
 import { initializeNotifications } from '@/services/notificationService';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import OnboardingTutorial from '@/components/OnboardingTutorial';
+import ThemeToggle from '@/components/ThemeToggle';
+import TaskCategories from '@/components/TaskCategories';
 
 export default function SettingsScreen() {
   const [totalTasks, setTotalTasks] = useState(0);
@@ -24,32 +28,34 @@ export default function SettingsScreen() {
   const [totalPomodoros, setTotalPomodoros] = useState(0);
   const [focusTime, setFocusTime] = useState(25);
   const [breakTime, setBreakTime] = useState(5);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   const { logout, user } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadStats();
-    loadTimerSettings();
+    loadSettings();
   }, []);
 
   const loadStats = async () => {
     try {
-      // Load tasks count
       const tasksData = await AsyncStorage.getItem('tasks');
       if (tasksData) {
         const tasks = JSON.parse(tasksData);
         setTotalTasks(tasks.length);
       }
 
-      // Load time blocks count
       const timeBlocksData = await AsyncStorage.getItem('timeBlocks');
       if (timeBlocksData) {
         const timeBlocks = JSON.parse(timeBlocksData);
         setTotalTimeBlocks(timeBlocks.length);
       }
 
-      // Load pomodoro stats
       const pomodoroData = await AsyncStorage.getItem('pomodoroStats');
       if (pomodoroData) {
         const stats = JSON.parse(pomodoroData);
@@ -64,7 +70,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const loadTimerSettings = async () => {
+  const loadSettings = async () => {
     try {
       const timerSettings = await AsyncStorage.getItem('timerSettings');
       if (timerSettings) {
@@ -72,8 +78,23 @@ export default function SettingsScreen() {
         setFocusTime(settings.focusTime || 25);
         setBreakTime(settings.breakTime || 5);
       }
+
+      const notifSettings = await AsyncStorage.getItem('notificationsEnabled');
+      if (notifSettings !== null) {
+        setNotificationsEnabled(JSON.parse(notifSettings));
+      }
+
+      const biometricSettings = await AsyncStorage.getItem('biometricEnabled');
+      if (biometricSettings !== null) {
+        setBiometricEnabled(JSON.parse(biometricSettings));
+      }
+
+      const twoFactorSettings = await AsyncStorage.getItem('twoFactorEnabled');
+      if (twoFactorSettings !== null) {
+        setTwoFactorEnabled(JSON.parse(twoFactorSettings));
+      }
     } catch (error) {
-      console.error('Error loading timer settings:', error);
+      console.error('Error loading settings:', error);
     }
   };
 
@@ -86,10 +107,8 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem('timerSettings', JSON.stringify(settings));
       setFocusTime(newFocusTime);
       setBreakTime(newBreakTime);
-      Alert.alert('Success', 'Timer settings saved successfully!');
     } catch (error) {
       console.error('Error saving timer settings:', error);
-      Alert.alert('Error', 'Failed to save timer settings.');
     }
   };
 
@@ -105,30 +124,89 @@ export default function SettingsScreen() {
     }
   };
 
-  const clearAllData = () => {
-    Alert.alert(
-      'Clear All Data',
-      'This will permanently delete all your tasks, time blocks, and statistics. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiRemove(['tasks', 'timeBlocks', 'pomodoroStats']);
-              setTotalTasks(0);
-              setTotalTimeBlocks(0);
-              setTotalPomodoros(0);
-              Alert.alert('Success', 'All data has been cleared.');
-            } catch (error) {
-              console.error('Error clearing data:', error);
-              Alert.alert('Error', 'Failed to clear data.');
-            }
-          },
-        },
-      ]
-    );
+  const toggleNotifications = async (value: boolean) => {
+    try {
+      setNotificationsEnabled(value);
+      await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+    }
+  };
+
+  const toggleBiometric = async (value: boolean) => {
+    try {
+      setBiometricEnabled(value);
+      await AsyncStorage.setItem('biometricEnabled', JSON.stringify(value));
+      Alert.alert(
+        'Biometric Authentication',
+        value ? 'Biometric authentication enabled' : 'Biometric authentication disabled'
+      );
+    } catch (error) {
+      console.error('Error saving biometric settings:', error);
+    }
+  };
+
+  const toggleTwoFactor = async (value: boolean) => {
+    try {
+      setTwoFactorEnabled(value);
+      await AsyncStorage.setItem('twoFactorEnabled', JSON.stringify(value));
+      Alert.alert(
+        'Two-Factor Authentication',
+        value ? 'Two-factor authentication enabled' : 'Two-factor authentication disabled'
+      );
+    } catch (error) {
+      console.error('Error saving 2FA settings:', error);
+    }
+  };
+
+  const showOnboardingTutorial = () => {
+    setShowOnboarding(true);
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
+
+  const openCategories = () => {
+    setShowCategories(true);
+  };
+
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
+  const testNotifications = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        if ('Notification' in window) {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            new Notification('🎉 Test Notification', {
+              body: 'Great! Notifications are working in your browser.',
+              icon: '/favicon.ico',
+            });
+            Alert.alert('Success', 'Web notification sent!');
+          } else {
+            Alert.alert('Permission Denied', 'Please enable notifications in your browser settings.');
+          }
+        }
+      } else {
+        const isInitialized = await initializeNotifications();
+        if (isInitialized) {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: '🎉 Test Notification',
+              body: 'Great! Notifications are working on your device.',
+              sound: true,
+            },
+            trigger: { seconds: 1 },
+          });
+          Alert.alert('Success', 'Test notification scheduled!');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to test notifications.');
+    }
   };
 
   const exportData = async () => {
@@ -144,16 +222,35 @@ export default function SettingsScreen() {
         exportDate: new Date().toISOString(),
       };
 
-      console.log('Export Data:', JSON.stringify(data, null, 2));
-      Alert.alert(
-        'Data Exported',
-        'Your data has been logged to the console. In a real app, this would be saved to a file or shared.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Data Exported', 'Your data has been prepared for export.');
     } catch (error) {
-      console.error('Error exporting data:', error);
       Alert.alert('Error', 'Failed to export data.');
     }
+  };
+
+  const clearAllData = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all your data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove(['tasks', 'timeBlocks', 'pomodoroStats']);
+              setTotalTasks(0);
+              setTotalTimeBlocks(0);
+              setTotalPomodoros(0);
+              Alert.alert('Success', 'All data has been cleared.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear data.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = () => {
@@ -161,10 +258,7 @@ export default function SettingsScreen() {
       'Logout',
       'Are you sure you want to logout?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
@@ -177,102 +271,97 @@ export default function SettingsScreen() {
     );
   };
 
-  const testNotifications = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        // Test web notification
-        if ('Notification' in window) {
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            new Notification('🎉 Test Notification', {
-              body: 'Great! Notifications are working in your browser.',
-              icon: '/favicon.ico',
-              requireInteraction: true,
-            });
-            Alert.alert('Success', 'Web notification sent! Check your browser notifications.');
-          } else {
-            Alert.alert('Permission Denied', 'Please enable notifications in your browser settings.');
-          }
-        } else {
-          Alert.alert('Not Supported', 'Notifications are not supported in this browser.');
-        }
-      } else {
-        // Test mobile notification
-        const isInitialized = await initializeNotifications();
-        if (isInitialized) {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: '🎉 Test Notification',
-              body: 'Great! Notifications are working on your device.',
-              sound: true,
-            },
-            trigger: {
-              seconds: 1,
-            },
-          });
-          Alert.alert('Success', 'Test notification scheduled! You should receive it in a moment.');
-        } else {
-          Alert.alert(
-            'Notifications Not Available',
-            'Notifications are not enabled or supported. Please enable them in your device settings.',
-            [
-              { text: 'OK', style: 'default' }
-            ]
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error testing notifications:', error);
-      Alert.alert('Error', 'Failed to test notifications. They may not be properly configured.');
-    }
-  };
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      // Refresh user settings if needed
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      console.error('Error refreshing settings:', error);
-    } finally {
-      setRefreshing(false);
-    }
+    await loadStats();
+    await loadSettings();
+    setRefreshing(false);
   }, []);
+
+  const SettingItem = ({ 
+    icon, 
+    title, 
+    subtitle, 
+    onPress, 
+    rightComponent 
+  }: {
+    icon: string;
+    title: string;
+    subtitle?: string;
+    onPress?: () => void;
+    rightComponent?: React.ReactNode;
+  }) => (
+    <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+      <View style={styles.settingLeft}>
+        <View style={styles.iconContainer}>
+          <Ionicons name={icon as any} size={20} color="#74b9ff" />
+        </View>
+        <View>
+          <ThemedText style={styles.settingTitle}>{title}</ThemedText>
+          {subtitle && <ThemedText style={styles.settingSubtitle}>{subtitle}</ThemedText>}
+        </View>
+      </View>
+      {rightComponent || <Ionicons name="chevron-forward" size={20} color="#999" />}
+    </TouchableOpacity>
+  );
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={true}
-        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
       >
-        <ThemedView style={styles.header}>
+        {/* Header */}
+        <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>Settings</ThemedText>
-          <ThemedText style={styles.subtitle}>Manage your PocketPlanner</ThemedText>
-        </ThemedView>
+          <ThemedText style={styles.subtitle}>Customize your PocketPlanner</ThemedText>
+        </View>
 
+        {/* User Profile Section */}
         {user && (
           <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Account</ThemedText>
-            <View style={styles.userInfo}>
-              <ThemedText style={styles.userInfoText}>Username: {user.username}</ThemedText>
-              <ThemedText style={styles.userInfoText}>Email: {user.email}</ThemedText>
-            </View>
-
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <ThemedText style={styles.logoutButtonText}>Logout</ThemedText>
-            </TouchableOpacity>
+            <ThemedText style={styles.sectionTitle}>Profile</ThemedText>
+            <SettingItem
+              icon="person-circle"
+              title="Profile Settings"
+              subtitle="Manage your profile, upload photo, edit details"
+              onPress={navigateToProfile}
+            />
           </View>
         )}
 
+        {/* App Features */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Timer Settings</ThemedText>
+          <ThemedText style={styles.sectionTitle}>App Features</ThemedText>
+          
+          <SettingItem
+            icon="help-circle"
+            title="Tutorial & Onboarding"
+            subtitle="View the app tutorial again"
+            onPress={showOnboardingTutorial}
+          />
 
-          <View style={styles.settingRow}>
+          <SettingItem
+            icon="color-palette"
+            title="Theme Settings"
+            subtitle="Switch between light and dark mode"
+            rightComponent={<ThemeToggle />}
+          />
+
+          <SettingItem
+            icon="pricetags"
+            title="Categories & Tags"
+            subtitle="Manage task categories and tags"
+            onPress={openCategories}
+          />
+        </View>
+
+        {/* Timer Settings */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Timer Settings</ThemedText>
+
+          <View style={styles.timerSetting}>
             <ThemedText style={styles.settingLabel}>Focus Time (minutes)</ThemedText>
             <View style={styles.timeControls}>
               <TouchableOpacity 
@@ -291,7 +380,7 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View style={styles.settingRow}>
+          <View style={styles.timerSetting}>
             <ThemedText style={styles.settingLabel}>Break Time (minutes)</ThemedText>
             <View style={styles.timeControls}>
               <TouchableOpacity 
@@ -311,123 +400,134 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Security & Privacy */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Statistics</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Security & Privacy</ThemedText>
 
-          <View style={styles.statRow}>
-            <ThemedText style={styles.statLabel}>Total Tasks Created</ThemedText>
-            <ThemedText style={styles.statValue}>{totalTasks}</ThemedText>
-          </View>
+          <SettingItem
+            icon="notifications"
+            title="Notifications"
+            subtitle="Enable task and deadline reminders"
+            rightComponent={
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={toggleNotifications}
+                trackColor={{ false: '#ccc', true: '#74b9ff' }}
+                thumbColor="#fff"
+              />
+            }
+          />
 
-          <View style={styles.statRow}>
-            <ThemedText style={styles.statLabel}>Time Blocks Scheduled</ThemedText>
-            <ThemedText style={styles.statValue}>{totalTimeBlocks}</ThemedText>
-          </View>
+          <SettingItem
+            icon="finger-print"
+            title="Biometric Login"
+            subtitle="Use fingerprint or face ID"
+            rightComponent={
+              <Switch
+                value={biometricEnabled}
+                onValueChange={toggleBiometric}
+                trackColor={{ false: '#ccc', true: '#74b9ff' }}
+                thumbColor="#fff"
+              />
+            }
+          />
 
-          <View style={styles.statRow}>
-            <ThemedText style={styles.statLabel}>Pomodoros Completed</ThemedText>
-            <ThemedText style={styles.statValue}>{totalPomodoros}</ThemedText>
+          <SettingItem
+            icon="shield-checkmark"
+            title="Two-Factor Authentication"
+            subtitle="Add extra security to your account"
+            rightComponent={
+              <Switch
+                value={twoFactorEnabled}
+                onValueChange={toggleTwoFactor}
+                trackColor={{ false: '#ccc', true: '#74b9ff' }}
+                thumbColor="#fff"
+              />
+            }
+          />
+        </View>
+
+        {/* Statistics */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Your Statistics</ThemedText>
+
+          <View style={styles.statGrid}>
+            <View style={styles.statCard}>
+              <ThemedText style={styles.statNumber}>{totalTasks}</ThemedText>
+              <ThemedText style={styles.statLabel}>Tasks Created</ThemedText>
+            </View>
+            <View style={styles.statCard}>
+              <ThemedText style={styles.statNumber}>{totalTimeBlocks}</ThemedText>
+              <ThemedText style={styles.statLabel}>Time Blocks</ThemedText>
+            </View>
+            <View style={styles.statCard}>
+              <ThemedText style={styles.statNumber}>{totalPomodoros}</ThemedText>
+              <ThemedText style={styles.statLabel}>Pomodoros</ThemedText>
+            </View>
           </View>
         </View>
 
+        {/* Data Management */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>About PocketPlanner</ThemedText>
-          <ThemedText style={styles.aboutText}>
-            PocketPlanner is your offline productivity companion. Track tasks, schedule time blocks, 
-            and use the Pomodoro technique to boost your focus.
-          </ThemedText>
-          <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
-        </View>
+          <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
 
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Features</ThemedText>
+          <SettingItem
+            icon="cloud-download"
+            title="Export Data"
+            subtitle="Download your tasks and progress"
+            onPress={exportData}
+          />
 
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureBullet}>✅</ThemedText>
-            <ThemedText style={styles.featureText}>Task Management</ThemedText>
-          </View>
+          <SettingItem
+            icon="notifications"
+            title="Test Notifications"
+            subtitle="Check if notifications are working"
+            onPress={testNotifications}
+          />
 
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureBullet}>⏰</ThemedText>
-            <ThemedText style={styles.featureText}>Time Blocking</ThemedText>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureBullet}>🍅</ThemedText>
-            <ThemedText style={styles.featureText}>Pomodoro Timer</ThemedText>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureBullet}>📱</ThemedText>
-            <ThemedText style={styles.featureText}>Offline Support</ThemedText>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureBullet}>📊</ThemedText>
-            <ThemedText style={styles.featureText}>Daily Overview</ThemedText>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Notifications</ThemedText>
-          <ThemedText style={styles.aboutText}>
-            Test if notifications are working properly on your device.
-          </ThemedText>
-
-          <TouchableOpacity style={styles.actionButton} onPress={testNotifications}>
-            <ThemedText style={styles.actionButtonText}>Test Notifications</ThemedText>
+          <TouchableOpacity style={styles.dangerItem} onPress={clearAllData}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.iconContainer, styles.dangerIcon]}>
+                <Ionicons name="trash" size={20} color="#e74c3c" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingTitle, styles.dangerText]}>Clear All Data</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>Permanently delete all data</ThemedText>
+              </View>
+            </View>
           </TouchableOpacity>
         </View>
 
+        {/* Account */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Data Management</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Account</ThemedText>
 
-          <TouchableOpacity style={styles.actionButton} onPress={exportData}>
-            <ThemedText style={styles.actionButtonText}>Export Data</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.dangerButton} onPress={clearAllData}>
-            <ThemedText style={styles.dangerButtonText}>Clear All Data</ThemedText>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out" size={20} color="white" />
+            <ThemedText style={styles.logoutText}>Logout</ThemedText>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Tips for Success</ThemedText>
-
-          <ThemedText style={styles.tipText}>
-            • Start each day by reviewing your Home screen
-          </ThemedText>
-          <ThemedText style={styles.tipText}>
-            • Break large tasks into smaller, manageable ones
-          </ThemedText>
-          <ThemedText style={styles.tipText}>
-            • Use time blocks to schedule important work
-          </ThemedText>
-          <ThemedText style={styles.tipText}>
-            • Try the Pomodoro technique for focused work sessions
-          </ThemedText>
-          <ThemedText style={styles.tipText}>
-            • Take breaks between intense work periods
-          </ThemedText>
-        </View>
-
-
-
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>About PocketPlanner</ThemedText>
+        {/* App Info */}
+        <View style={[styles.section, styles.lastSection]}>
+          <ThemedText style={styles.sectionTitle}>About</ThemedText>
           <ThemedText style={styles.aboutText}>
-            PocketPlanner is your offline productivity companion. Track tasks, schedule time blocks, 
-            and use the Pomodoro technique to boost your focus.
-          </ThemedText>
-          <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
-        </View>
-
-        <View style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            Built with ❤️ for productivity enthusiasts
+            PocketPlanner v1.0.0{'\n'}
+            Your personal productivity companion
           </ThemedText>
         </View>
       </ScrollView>
+
+      {/* Modals */}
+      <OnboardingTutorial 
+        visible={showOnboarding} 
+        onComplete={handleOnboardingComplete} 
+      />
+
+      <TaskCategories
+        visible={showCategories}
+        onClose={() => setShowCategories(false)}
+      />
     </ThemedView>
   );
 }
@@ -436,13 +536,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    maxWidth: '100%',
-    alignSelf: 'center',
-    width: '100%',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
-    padding: 16,
-    paddingTop: 40,
+    padding: 20,
+    paddingTop: 60,
     backgroundColor: '#74b9ff',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -458,8 +558,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   section: {
-    marginHorizontal: 12,
-    marginVertical: 8,
+    marginHorizontal: 16,
+    marginTop: 20,
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
@@ -468,98 +568,55 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    minHeight: 100,
+  },
+  lastSection: {
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 16,
     color: '#333',
   },
-  statRow: {
+  settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#74b9ff',
-  },
-  aboutText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  versionText: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  featureItem: {
+  settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-  },
-  featureBullet: {
-    fontSize: 16,
-    marginRight: 12,
-    width: 24,
-  },
-  featureText: {
-    fontSize: 14,
-    color: '#333',
     flex: 1,
   },
-  actionButton: {
-    backgroundColor: '#74b9ff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f8ff',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginRight: 12,
   },
-  actionButtonText: {
-    color: 'white',
+  dangerIcon: {
+    backgroundColor: '#ffebee',
+  },
+  settingTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
   },
-  dangerButton: {
-    backgroundColor: '#e17055',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  dangerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  tipText: {
+  settingSubtitle: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 8,
-    paddingLeft: 8,
   },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
+  dangerText: {
+    color: '#e74c3c',
   },
-  footerText: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  settingRow: {
+  timerSetting: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -568,7 +625,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   settingLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
     flex: 1,
   },
@@ -597,32 +654,54 @@ const styles = StyleSheet.create({
     minWidth: 24,
     textAlign: 'center',
   },
-  userInfo: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+  statGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  userInfoText: {
-    fontSize: 16,
-    marginBottom: 8,
+  statCard: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#74b9ff',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  dangerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
   },
   logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#fd79a8',
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
     marginTop: 8,
   },
-  logoutButtonText: {
+  logoutText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
+  aboutText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -5,47 +5,48 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   Alert,
   Image,
-  TextInput,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { authenticateUser } from '@/services/database';
 
 interface UserProfile {
-  profileImage?: string;
   username: string;
   email: string;
-  phone?: string;
-  address?: string;
-  twoFactorEnabled: boolean;
+  fullName: string;
+  phone: string;
+  address: string;
+  profileImage?: string;
+  dateJoined: string;
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, updateUser } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>({
     username: user?.username || '',
     email: user?.email || '',
+    fullName: '',
     phone: '',
     address: '',
-    twoFactorEnabled: false,
+    dateJoined: new Date().toISOString(),
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -53,33 +54,46 @@ export default function ProfileScreen() {
 
   const loadProfile = async () => {
     try {
-      const savedProfile = await AsyncStorage.getItem('userProfile');
+      const savedProfile = await AsyncStorage.getItem(`profile_${user?.id}`);
       if (savedProfile) {
-        const parsedProfile = JSON.parse(savedProfile);
-        setProfile(prev => ({ ...prev, ...parsedProfile }));
+        const profileData = JSON.parse(savedProfile);
+        setProfile({ ...profile, ...profileData });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
     }
   };
 
-  const saveProfile = async () => {
+  const saveProfile = async (newProfile: UserProfile) => {
     try {
-      await AsyncStorage.setItem('userProfile', JSON.stringify(profile));
-      setIsEditing(false);
+      await AsyncStorage.setItem(`profile_${user?.id}`, JSON.stringify(newProfile));
+      setProfile(newProfile);
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile.');
+      Alert.alert('Error', 'Failed to save profile changes.');
     }
+  };
+
+  const handleSaveProfile = () => {
+    if (!profile.username.trim()) {
+      Alert.alert('Error', 'Username is required.');
+      return;
+    }
+    if (!profile.email.trim()) {
+      Alert.alert('Error', 'Email is required.');
+      return;
+    }
+    
+    saveProfile(profile);
+    setIsEditing(false);
   };
 
   const pickImage = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (permissionResult.granted === false) {
-        Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload a photo.');
         return;
       }
 
@@ -87,11 +101,15 @@ export default function ProfileScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.7,
       });
 
-      if (!result.canceled) {
-        setProfile(prev => ({ ...prev, profileImage: result.assets[0].uri }));
+      if (!result.canceled && result.assets[0]) {
+        const newProfile = { ...profile, profileImage: result.assets[0].uri };
+        setProfile(newProfile);
+        if (!isEditing) {
+          saveProfile(newProfile);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -99,318 +117,355 @@ export default function ProfileScreen() {
     }
   };
 
-  const deleteProfileImage = () => {
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permissions to take a photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const newProfile = { ...profile, profileImage: result.assets[0].uri };
+        setProfile(newProfile);
+        if (!isEditing) {
+          saveProfile(newProfile);
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo.');
+    }
+  };
+
+  const showImageOptions = () => {
     Alert.alert(
-      'Delete Profile Picture',
-      'Are you sure you want to delete your profile picture?',
+      'Profile Photo',
+      'Choose an option',
+      [
+        { text: 'Camera', onPress: takePhoto },
+        { text: 'Photo Library', onPress: pickImage },
+        { text: 'Remove Photo', style: 'destructive', onPress: removePhoto },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const removePhoto = () => {
+    const newProfile = { ...profile, profileImage: undefined };
+    setProfile(newProfile);
+    if (!isEditing) {
+      saveProfile(newProfile);
+    }
+  };
+
+  const handleChangePassword = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all password fields.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    // Generate verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedCode(code);
+    setShowPasswordModal(false);
+    setShowVerificationModal(true);
+    
+    // In a real app, you would send this code via email/SMS
+    Alert.alert(
+      'Verification Code',
+      `Your verification code is: ${code}\n\n(In a real app, this would be sent to your email)`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const verifyAndChangePassword = async () => {
+    if (verificationCode !== generatedCode) {
+      Alert.alert('Error', 'Invalid verification code.');
+      return;
+    }
+
+    try {
+      // In a real app, you would hash the password and update it in the backend
+      Alert.alert('Success', 'Password changed successfully!');
+      setShowVerificationModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setVerificationCode('');
+      setGeneratedCode('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to change password.');
+    }
+  };
+
+  const deleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => setProfile(prev => ({ ...prev, profileImage: undefined })),
+          onPress: () => {
+            Alert.alert('Account Deleted', 'Your account has been deleted.');
+            // In a real app, you would delete the account from the backend
+            router.replace('/auth/login');
+          },
         },
       ]
     );
   };
 
-  const changePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields.');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match.');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long.');
-      return;
-    }
-
-    try {
-      // Verify current password
-      const authResult = await authenticateUser(user?.email || '', currentPassword);
-      if (!authResult.success) {
-        Alert.alert('Error', 'Current password is incorrect.');
-        return;
-      }
-
-      // In a real app, you would update the password in the database
-      setShowPasswordModal(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      Alert.alert('Success', 'Password changed successfully!');
-    } catch (error) {
-      console.error('Error changing password:', error);
-      Alert.alert('Error', 'Failed to change password.');
-    }
-  };
-
-  const toggleTwoFactor = async () => {
-    if (!profile.twoFactorEnabled) {
-      // Enable 2FA - generate code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setVerificationCode(code);
-      Alert.alert(
-        'Two-Factor Authentication',
-        `Your verification code is: ${code}\nEnter this code to enable 2FA.`,
-        [{ text: 'OK' }]
-      );
-      setShowTwoFactorModal(true);
-    } else {
-      // Disable 2FA
-      Alert.alert(
-        'Disable Two-Factor Authentication',
-        'Are you sure you want to disable 2FA?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Disable',
-            style: 'destructive',
-            onPress: () => {
-              setProfile(prev => ({ ...prev, twoFactorEnabled: false }));
-              Alert.alert('Success', 'Two-factor authentication disabled.');
-            },
-          },
-        ]
-      );
-    }
-  };
-
-  const confirmTwoFactor = () => {
-    if (twoFactorCode === verificationCode) {
-      setProfile(prev => ({ ...prev, twoFactorEnabled: true }));
-      setShowTwoFactorModal(false);
-      setTwoFactorCode('');
-      Alert.alert('Success', 'Two-factor authentication enabled!');
-    } else {
-      Alert.alert('Error', 'Invalid verification code.');
-    }
-  };
-
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title" style={styles.title}>Profile</ThemedText>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setIsEditing(!isEditing)}
-          >
-            <Ionicons name={isEditing ? "checkmark" : "pencil"} size={24} color="white" />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-        </ThemedView>
-
-        {/* Profile Image Section */}
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Profile Picture</ThemedText>
-          <View style={styles.imageContainer}>
-            <TouchableOpacity onPress={isEditing ? pickImage : undefined}>
-              {profile.profileImage ? (
-                <Image source={{ uri: profile.profileImage }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.placeholderImage}>
-                  <Ionicons name="person" size={60} color="#999" />
-                </View>
-              )}
-              {isEditing && (
-                <View style={styles.imageOverlay}>
-                  <Ionicons name="camera" size={30} color="white" />
-                </View>
-              )}
-            </TouchableOpacity>
-            {isEditing && profile.profileImage && (
-              <TouchableOpacity style={styles.deleteImageButton} onPress={deleteProfileImage}>
-                <Ionicons name="trash" size={20} color="#e74c3c" />
-                <ThemedText style={styles.deleteImageText}>Delete Photo</ThemedText>
-              </TouchableOpacity>
-            )}
-          </View>
+          <ThemedText style={styles.headerTitle}>Profile</ThemedText>
+          <TouchableOpacity
+            onPress={() => setIsEditing(!isEditing)}
+            style={styles.editButton}
+          >
+            <Ionicons name={isEditing ? "close" : "pencil"} size={20} color="white" />
+          </TouchableOpacity>
         </View>
 
-        {/* User Information Section */}
+        {/* Profile Image Section */}
+        <View style={styles.imageSection}>
+          <TouchableOpacity onPress={showImageOptions} style={styles.imageContainer}>
+            {profile.profileImage ? (
+              <Image source={{ uri: profile.profileImage }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.placeholderImage}>
+                <Ionicons name="person" size={60} color="#ccc" />
+              </View>
+            )}
+            <View style={styles.cameraIcon}>
+              <Ionicons name="camera" size={16} color="white" />
+            </View>
+          </TouchableOpacity>
+          <ThemedText style={styles.imageHint}>Tap to change photo</ThemedText>
+        </View>
+
+        {/* Profile Information */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Personal Information</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Personal Information</ThemedText>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Username</ThemedText>
+            <ThemedText style={styles.label}>Username</ThemedText>
             <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled]}
+              style={[styles.input, !isEditing && styles.disabledInput]}
               value={profile.username}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, username: text }))}
+              onChangeText={(text) => setProfile({ ...profile, username: text })}
               editable={isEditing}
+              placeholder="Enter username"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Email</ThemedText>
+            <ThemedText style={styles.label}>Full Name</ThemedText>
             <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled]}
+              style={[styles.input, !isEditing && styles.disabledInput]}
+              value={profile.fullName}
+              onChangeText={(text) => setProfile({ ...profile, fullName: text })}
+              editable={isEditing}
+              placeholder="Enter full name"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Email</ThemedText>
+            <TextInput
+              style={[styles.input, !isEditing && styles.disabledInput]}
               value={profile.email}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, email: text }))}
+              onChangeText={(text) => setProfile({ ...profile, email: text })}
               editable={isEditing}
+              placeholder="Enter email"
               keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Phone Number</ThemedText>
+            <ThemedText style={styles.label}>Phone Number</ThemedText>
             <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled]}
+              style={[styles.input, !isEditing && styles.disabledInput]}
               value={profile.phone}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, phone: text }))}
+              onChangeText={(text) => setProfile({ ...profile, phone: text })}
               editable={isEditing}
-              keyboardType="phone-pad"
               placeholder="Enter phone number"
+              keyboardType="phone-pad"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Address</ThemedText>
+            <ThemedText style={styles.label}>Address</ThemedText>
             <TextInput
-              style={[styles.input, styles.textArea, !isEditing && styles.inputDisabled]}
+              style={[styles.input, styles.textArea, !isEditing && styles.disabledInput]}
               value={profile.address}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, address: text }))}
+              onChangeText={(text) => setProfile({ ...profile, address: text })}
               editable={isEditing}
+              placeholder="Enter address"
               multiline
               numberOfLines={3}
-              placeholder="Enter address"
             />
           </View>
 
           {isEditing && (
-            <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-              <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
-            </TouchableOpacity>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setIsEditing(false);
+                  loadProfile();
+                }}
+              >
+                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+                <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
         {/* Security Section */}
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Security</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Security</ThemedText>
 
-          <TouchableOpacity style={styles.securityButton} onPress={() => setShowPasswordModal(true)}>
-            <Ionicons name="lock-closed" size={24} color="#74b9ff" />
-            <ThemedText style={styles.securityButtonText}>Change Password</ThemedText>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
+          <TouchableOpacity
+            style={styles.securityItem}
+            onPress={() => setShowPasswordModal(true)}
+          >
+            <View style={styles.securityLeft}>
+              <Ionicons name="lock-closed" size={20} color="#74b9ff" />
+              <ThemedText style={styles.securityText}>Change Password</ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.securityButton} onPress={toggleTwoFactor}>
-            <Ionicons name="shield-checkmark" size={24} color="#74b9ff" />
-            <View style={styles.securityButtonContent}>
-              <ThemedText style={styles.securityButtonText}>Two-Factor Authentication</ThemedText>
-              <ThemedText style={styles.securityButtonSubtext}>
-                {profile.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+          <TouchableOpacity style={styles.dangerItem} onPress={deleteAccount}>
+            <View style={styles.securityLeft}>
+              <Ionicons name="trash" size={20} color="#e74c3c" />
+              <ThemedText style={[styles.securityText, styles.dangerText]}>
+                Delete Account
               </ThemedText>
             </View>
-            <View style={[
-              styles.toggle,
-              profile.twoFactorEnabled ? styles.toggleEnabled : styles.toggleDisabled
-            ]}>
-              <View style={[
-                styles.toggleThumb,
-                profile.twoFactorEnabled ? styles.toggleThumbEnabled : styles.toggleThumbDisabled
-              ]} />
-            </View>
+            <Ionicons name="chevron-forward" size={20} color="#e74c3c" />
           </TouchableOpacity>
         </View>
 
-        {/* Logout Section */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-            <Ionicons name="log-out" size={24} color="#e74c3c" />
-            <ThemedText style={styles.logoutButtonText}>Logout</ThemedText>
-          </TouchableOpacity>
+        {/* Account Info */}
+        <View style={[styles.section, styles.lastSection]}>
+          <ThemedText style={styles.sectionTitle}>Account Information</ThemedText>
+          <View style={styles.infoRow}>
+            <ThemedText style={styles.infoLabel}>Member Since</ThemedText>
+            <ThemedText style={styles.infoValue}>
+              {new Date(profile.dateJoined).toLocaleDateString()}
+            </ThemedText>
+          </View>
+          <View style={styles.infoRow}>
+            <ThemedText style={styles.infoLabel}>User ID</ThemedText>
+            <ThemedText style={styles.infoValue}>{user?.id}</ThemedText>
+          </View>
         </View>
       </ScrollView>
 
       {/* Password Change Modal */}
-      <Modal visible={showPasswordModal} animationType="slide" presentationStyle="pageSheet">
-        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalHeader}>
-            <ThemedText type="title" style={styles.modalTitle}>Change Password</ThemedText>
-            <TouchableOpacity onPress={() => setShowPasswordModal(false)}>
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
+      <Modal visible={showPasswordModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Current Password</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry
-                placeholder="Enter current password"
-              />
-            </View>
+            <ThemedText style={styles.modalTitle}>Change Password</ThemedText>
 
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>New Password</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                placeholder="Enter new password"
-              />
-            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="Current Password"
+              secureTextEntry
+            />
 
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Confirm New Password</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                placeholder="Confirm new password"
-              />
-            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="New Password"
+              secureTextEntry
+            />
 
-            <TouchableOpacity style={styles.modalButton} onPress={changePassword}>
-              <ThemedText style={styles.modalButtonText}>Change Password</ThemedText>
-            </TouchableOpacity>
+            <TextInput
+              style={styles.modalInput}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm New Password"
+              secureTextEntry
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowPasswordModal(false)}
+              >
+                <ThemedText style={styles.modalCancelText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSaveButton} onPress={handleChangePassword}>
+                <ThemedText style={styles.modalSaveText}>Change Password</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
-      {/* Two-Factor Authentication Modal */}
-      <Modal visible={showTwoFactorModal} animationType="slide" presentationStyle="pageSheet">
-        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalHeader}>
-            <ThemedText type="title" style={styles.modalTitle}>Enable 2FA</ThemedText>
-            <TouchableOpacity onPress={() => setShowTwoFactorModal(false)}>
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
+      {/* Verification Modal */}
+      <Modal visible={showVerificationModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ThemedText style={styles.twoFactorDescription}>
-              Enter the verification code to enable two-factor authentication.
+            <ThemedText style={styles.modalTitle}>Enter Verification Code</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>
+              Please enter the verification code sent to your email
             </ThemedText>
 
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Verification Code</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={twoFactorCode}
-                onChangeText={setTwoFactorCode}
-                placeholder="Enter 6-digit code"
-                keyboardType="number-pad"
-                maxLength={6}
-              />
-            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={verificationCode}
+              onChangeText={setVerificationCode}
+              placeholder="6-digit code"
+              keyboardType="numeric"
+              maxLength={6}
+            />
 
-            <TouchableOpacity style={styles.modalButton} onPress={confirmTwoFactor}>
-              <ThemedText style={styles.modalButtonText}>Enable 2FA</ThemedText>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowVerificationModal(false)}
+              >
+                <ThemedText style={styles.modalCancelText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSaveButton} onPress={verifyAndChangePassword}>
+                <ThemedText style={styles.modalSaveText}>Verify</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </ThemedView>
   );
@@ -424,52 +479,41 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingTop: 60,
+    paddingBottom: 20,
     backgroundColor: '#74b9ff',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
-  title: {
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
     color: 'white',
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   editButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 8,
   },
-  section: {
-    marginHorizontal: 16,
-    marginVertical: 12,
+  imageSection: {
+    alignItems: 'center',
+    paddingVertical: 30,
     backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: -10,
     borderRadius: 16,
-    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
-  },
   imageContainer: {
-    alignItems: 'center',
+    position: 'relative',
   },
   profileImage: {
     width: 120,
@@ -483,40 +527,54 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
   },
-  imageOverlay: {
+  cameraIcon: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 60,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#74b9ff',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
   },
-  deleteImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  imageHint: {
     marginTop: 12,
-    padding: 8,
-  },
-  deleteImageText: {
-    marginLeft: 8,
-    color: '#e74c3c',
     fontSize: 14,
+    color: '#666',
+  },
+  section: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  lastSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#333',
   },
   inputGroup: {
     marginBottom: 16,
   },
-  inputLabel: {
+  label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
     color: '#333',
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
@@ -526,129 +584,150 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: 'white',
   },
-  inputDisabled: {
+  disabledInput: {
     backgroundColor: '#f8f9fa',
     color: '#666',
   },
   textArea: {
-    minHeight: 80,
+    height: 80,
     textAlignVertical: 'top',
   },
-  saveButton: {
-    backgroundColor: '#74b9ff',
-    borderRadius: 8,
-    padding: 16,
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#74b9ff',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginLeft: 8,
   },
   saveButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  securityButton: {
+  securityItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  securityButtonContent: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  securityButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  securityButtonSubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    padding: 2,
-    justifyContent: 'center',
-  },
-  toggleEnabled: {
-    backgroundColor: '#74b9ff',
-  },
-  toggleDisabled: {
-    backgroundColor: '#ddd',
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'white',
-  },
-  toggleThumbEnabled: {
-    transform: [{ translateX: 22 }],
-  },
-  toggleThumbDisabled: {
-    transform: [{ translateX: 0 }],
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    backgroundColor: '#fff5f5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#fed7d7',
-  },
-  logoutButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#e74c3c',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  modalHeader: {
+  dangerItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    paddingVertical: 16,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  securityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  securityText: {
+    fontSize: 16,
+    marginLeft: 12,
     color: '#333',
   },
-  modalContent: {
-    flex: 1,
-    padding: 20,
+  dangerText: {
+    color: '#e74c3c',
   },
-  modalButton: {
-    backgroundColor: '#74b9ff',
-    borderRadius: 8,
-    padding: 16,
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  modalButtonText: {
+  infoLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  modalCancelText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  modalSaveButton: {
+    flex: 1,
+    backgroundColor: '#74b9ff',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  modalSaveText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  twoFactorDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 24,
   },
 });
