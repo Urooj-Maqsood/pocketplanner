@@ -22,6 +22,7 @@ import DailyEnergyTracker from '@/components/DailyEnergyTracker';
 import FocusForecast from '@/components/FocusForecast';
 import SmartTaskSuggestions from '@/components/SmartTaskSuggestions';
 import StreakTracker from '@/components/StreakTracker';
+import VoiceAssistant from '@/components/VoiceAssistant';
 
 interface Task {
   id: string;
@@ -250,6 +251,14 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
         </View>
+      </ThemedView>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="subtitle" style={styles.sectionTitle}>Voice Assistant</ThemedText>
+        <VoiceAssistant 
+          onTaskCreated={loadData}
+          onTaskCompleted={loadData}
+        />
       </ThemedView>
 
       <DailyEnergyTracker

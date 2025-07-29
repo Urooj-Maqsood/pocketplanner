@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
@@ -21,6 +20,7 @@ import { Platform } from 'react-native';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
 import ThemeToggle from '@/components/ThemeToggle';
 import TaskCategories from '@/components/TaskCategories';
+import VoiceAssistant from '@/components/VoiceAssistant';
 
 export default function SettingsScreen() {
   const [totalTasks, setTotalTasks] = useState(0);
@@ -334,7 +334,7 @@ export default function SettingsScreen() {
         {/* App Features */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>App Features</ThemedText>
-          
+
           <SettingItem
             icon="help-circle"
             title="Tutorial & Onboarding"
@@ -528,6 +528,30 @@ export default function SettingsScreen() {
         visible={showCategories}
         onClose={() => setShowCategories(false)}
       />
+      
+      <ThemedView style={styles.section}>
+        <ThemedText type="title" style={styles.sectionTitle}>Voice Assistant</ThemedText>
+        <ThemedText style={styles.sectionDescription}>
+          Use voice commands to create and manage tasks hands-free
+        </ThemedText>
+        <VoiceAssistant 
+          onTaskCreated={() => {
+            // Optionally refresh tasks or show notification
+            console.log('Task created via voice');
+          }}
+          onTaskCompleted={() => {
+            // Optionally refresh tasks or show notification
+            console.log('Task completed via voice');
+          }}
+        />
+        <View style={styles.voiceCommandsList}>
+          <ThemedText style={styles.commandTitle}>Available Commands:</ThemedText>
+          <ThemedText style={styles.commandItem}>• "Add task [task name]"</ThemedText>
+          <ThemedText style={styles.commandItem}>• "Complete task [task name]"</ThemedText>
+          <ThemedText style={styles.commandItem}>• "List tasks"</ThemedText>
+          <ThemedText style={styles.commandItem}>• "Help"</ThemedText>
+        </View>
+      </ThemedView>
     </ThemedView>
   );
 }
@@ -703,5 +727,25 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  voiceCommandsList: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: '#f8f9ff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  commandTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c5ce7',
+    marginBottom: 8,
+  },
+  commandItem: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+    paddingLeft: 10,
   },
 });
