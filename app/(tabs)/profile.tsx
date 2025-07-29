@@ -85,8 +85,32 @@ export default function ProfileScreen() {
       return;
     }
     
+    // Show loading state
+    Alert.alert('Saving...', 'Please wait while we update your profile.');
     saveProfile(profile);
     setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    Alert.alert(
+      'Discard Changes',
+      'Are you sure you want to discard your changes?',
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        { 
+          text: 'Discard', 
+          style: 'destructive',
+          onPress: () => {
+            setIsEditing(false);
+            loadProfile(); // Reset to original data
+          }
+        },
+      ]
+    );
+  };
+
+  const clearField = (fieldName: keyof UserProfile) => {
+    setProfile({ ...profile, [fieldName]: '' });
   };
 
   const pickImage = async () => {
@@ -240,7 +264,9 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Profile</ThemedText>
+          <ThemedText style={styles.headerTitle}>
+            {isEditing ? 'Edit Profile' : 'Profile'}
+          </ThemedText>
           <TouchableOpacity
             onPress={() => setIsEditing(!isEditing)}
             style={styles.editButton}
@@ -271,9 +297,20 @@ export default function ProfileScreen() {
           <ThemedText style={styles.sectionTitle}>Personal Information</ThemedText>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Username</ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText style={styles.label}>Username</ThemedText>
+              {isEditing && profile.username && (
+                <TouchableOpacity onPress={() => clearField('username')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                !isEditing && styles.disabledInput,
+                isEditing && styles.editingInput
+              ]}
               value={profile.username}
               onChangeText={(text) => setProfile({ ...profile, username: text })}
               editable={isEditing}
@@ -282,9 +319,20 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Full Name</ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText style={styles.label}>Full Name</ThemedText>
+              {isEditing && profile.fullName && (
+                <TouchableOpacity onPress={() => clearField('fullName')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                !isEditing && styles.disabledInput,
+                isEditing && styles.editingInput
+              ]}
               value={profile.fullName}
               onChangeText={(text) => setProfile({ ...profile, fullName: text })}
               editable={isEditing}
@@ -293,9 +341,20 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Email</ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText style={styles.label}>Email</ThemedText>
+              {isEditing && profile.email && (
+                <TouchableOpacity onPress={() => clearField('email')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                !isEditing && styles.disabledInput,
+                isEditing && styles.editingInput
+              ]}
               value={profile.email}
               onChangeText={(text) => setProfile({ ...profile, email: text })}
               editable={isEditing}
@@ -306,9 +365,20 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Phone Number</ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText style={styles.label}>Phone Number</ThemedText>
+              {isEditing && profile.phone && (
+                <TouchableOpacity onPress={() => clearField('phone')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                !isEditing && styles.disabledInput,
+                isEditing && styles.editingInput
+              ]}
               value={profile.phone}
               onChangeText={(text) => setProfile({ ...profile, phone: text })}
               editable={isEditing}
@@ -318,9 +388,21 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Address</ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText style={styles.label}>Address</ThemedText>
+              {isEditing && profile.address && (
+                <TouchableOpacity onPress={() => clearField('address')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
-              style={[styles.input, styles.textArea, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                styles.textArea, 
+                !isEditing && styles.disabledInput,
+                isEditing && styles.editingInput
+              ]}
               value={profile.address}
               onChangeText={(text) => setProfile({ ...profile, address: text })}
               editable={isEditing}
@@ -334,10 +416,7 @@ export default function ProfileScreen() {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => {
-                  setIsEditing(false);
-                  loadProfile();
-                }}
+                onPress={handleCancelEdit}
               >
                 <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
               </TouchableOpacity>
@@ -587,6 +666,19 @@ const styles = StyleSheet.create({
   disabledInput: {
     backgroundColor: '#f8f9fa',
     color: '#666',
+  },
+  editingInput: {
+    borderColor: '#74b9ff',
+    borderWidth: 2,
+    backgroundColor: '#ffffff',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  clearButton: {
+    padding: 4,
   },
   textArea: {
     height: 80,
