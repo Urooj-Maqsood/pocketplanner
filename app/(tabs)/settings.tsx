@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
@@ -315,7 +316,7 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>Settings</ThemedText>
-          <ThemedText style={styles.subtitle}>Customize your PocketPlanner</ThemedText>
+          <ThemedText style={styles.subtitle}>Manage your PocketPlanner</ThemedText>
         </View>
 
         {/* User Profile Section */}
@@ -355,6 +356,31 @@ export default function SettingsScreen() {
             subtitle="Manage task categories and tags"
             onPress={openCategories}
           />
+        </View>
+
+        {/* Voice Assistant Section */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Voice Assistant</ThemedText>
+          <ThemedText style={styles.sectionDescription}>
+            Use voice commands to create and manage tasks hands-free
+          </ThemedText>
+          <VoiceAssistant 
+            onTaskCreated={() => {
+              loadStats();
+              console.log('Task created via voice');
+            }}
+            onTaskCompleted={() => {
+              loadStats();
+              console.log('Task completed via voice');
+            }}
+          />
+          <View style={styles.voiceCommandsList}>
+            <ThemedText style={styles.commandTitle}>Available Commands:</ThemedText>
+            <ThemedText style={styles.commandItem}>• "Add task [task name]"</ThemedText>
+            <ThemedText style={styles.commandItem}>• "Complete task [task name]"</ThemedText>
+            <ThemedText style={styles.commandItem}>• "List tasks"</ThemedText>
+            <ThemedText style={styles.commandItem}>• "Help"</ThemedText>
+          </View>
         </View>
 
         {/* Timer Settings */}
@@ -528,30 +554,6 @@ export default function SettingsScreen() {
         visible={showCategories}
         onClose={() => setShowCategories(false)}
       />
-      
-      <ThemedView style={styles.section}>
-        <ThemedText type="title" style={styles.sectionTitle}>Voice Assistant</ThemedText>
-        <ThemedText style={styles.sectionDescription}>
-          Use voice commands to create and manage tasks hands-free
-        </ThemedText>
-        <VoiceAssistant 
-          onTaskCreated={() => {
-            // Optionally refresh tasks or show notification
-            console.log('Task created via voice');
-          }}
-          onTaskCompleted={() => {
-            // Optionally refresh tasks or show notification
-            console.log('Task completed via voice');
-          }}
-        />
-        <View style={styles.voiceCommandsList}>
-          <ThemedText style={styles.commandTitle}>Available Commands:</ThemedText>
-          <ThemedText style={styles.commandItem}>• "Add task [task name]"</ThemedText>
-          <ThemedText style={styles.commandItem}>• "Complete task [task name]"</ThemedText>
-          <ThemedText style={styles.commandItem}>• "List tasks"</ThemedText>
-          <ThemedText style={styles.commandItem}>• "Help"</ThemedText>
-        </View>
-      </ThemedView>
     </ThemedView>
   );
 }
@@ -601,6 +603,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     color: '#333',
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
   },
   settingItem: {
     flexDirection: 'row',
