@@ -184,31 +184,7 @@ export default function TasksScreen() {
 
   const loadTasks = async () => {
     try {
-      await analyzeTaskHistory();
-
-      // Load notification enabled state
-      try {
-        const enabledState = await AsyncStorage.getItem('notifications_enabled');
-        const isEnabled = enabledState === 'true';
-        setNotificationsEnabled(isEnabled);
-
-        if (isEnabled) {
-          // Initialize notifications
-          await initializeNotifications();
-
-          // Load notification settings
-          const settings = await getNotificationSettings();
-          setNotificationReminderMinutes(settings.preStartMinutes);
-
-          // Clean up expired notifications
-          await cleanupExpiredNotifications();
-        }
-      } catch (notificationError) {
-        console.log('Notifications not available, continuing without them');
-        setNotificationsEnabled(false);
-      }
-
-      // Load tasks with error handling
+      // Load tasks with error handling - prioritize this to reduce loading time
       try {
         const tasksData = await AsyncStorage.getItem('tasks');
         if (tasksData) {
@@ -216,7 +192,7 @@ export default function TasksScreen() {
           const todayTasks = allTasks.filter((task: Task) => {
             // Convert task.date to YYYY-MM-DD format if it's in a different format
             let taskDate = task.date;
-            if (taskDate.includes(' ')) {
+            if (taskDate && taskDate.includes(' ')) {
               // If task.date is in toDateString() format, convert to YYYY-MM-DD
               taskDate = new Date(task.date).toISOString().split('T')[0];
             }
@@ -239,7 +215,7 @@ export default function TasksScreen() {
           const todayBlocks = allTimeBlocks.filter((block: TimeBlock) => {
             // Ensure consistent date format comparison
             let blockDate = block.date;
-            if (blockDate.includes(' ')) {
+            if (blockDate && blockDate.includes(' ')) {
               // If block.date is in toDateString() format, convert to YYYY-MM-DD
               blockDate = new Date(block.date).toISOString().split('T')[0];
             }
@@ -251,6 +227,35 @@ export default function TasksScreen() {
         console.log('Error loading time blocks, starting fresh');
         setTimeBlocks([]);
       }
+
+      // Load notification settings asynchronously to avoid blocking
+      setTimeout(async () => {
+        try {
+          const enabledState = await AsyncStorage.getItem('notifications_enabled');
+          const isEnabled = enabledState === 'true';
+          setNotificationsEnabled(isEnabled);
+
+          if (isEnabled) {
+            try {
+              await initializeNotifications();
+              const settings = await getNotificationSettings();
+              setNotificationReminderMinutes(settings.preStartMinutes);
+              await cleanupExpiredNotifications();
+            } catch (notificationError) {
+              console.log('Notification setup failed');
+            }
+          }
+        } catch (notificationError) {
+          console.log('Notifications not available');
+          setNotificationsEnabled(false);
+        }
+      }, 100);
+
+      // Analyze task history asynchronously
+      setTimeout(() => {
+        analyzeTaskHistory().catch(() => console.log('Task history analysis failed'));
+      }, 200);
+
     } catch (error) {
       console.log('Error during initialization, but app will continue to work');
     }
@@ -457,17 +462,19 @@ export default function TasksScreen() {
                 console.log('Notification cancellation failed, continuing with delete');
               }
 
-              // Remove from storage
+              // Get all tasks from storage
               const tasksData = await AsyncStorage.getItem('tasks');
               const allTasks = tasksData ? JSON.parse(tasksData) : [];
-              const updatedTasks = allTasks.filter((task: Task) => task.id !== taskId);
-              await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
               
-              // Update local state
-              setTasks(prev => prev.filter(task => task.id !== taskId));
+              // Filter out the task to delete from all tasks
+              const updatedAllTasks = allTasks.filter((task: Task) => task.id !== taskId);
               
-              // Reload tasks to ensure consistency
-              await loadTasks();
+              // Save updated tasks back to storage
+              await AsyncStorage.setItem('tasks', JSON.stringify(updatedAllTasks));
+              
+              // Update local state immediately
+              const updatedLocalTasks = tasks.filter(task => task.id !== taskId);
+              setTasks(updatedLocalTasks);
               
               Alert.alert('Success', 'Task deleted successfully!');
             } catch (error) {

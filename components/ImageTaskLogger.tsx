@@ -125,6 +125,11 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
 
   const saveImageToDirectory = async (imageUri: string): Promise<string> => {
     try {
+      // For web, just return the original URI since FileSystem operations aren't supported
+      if (typeof window !== 'undefined') {
+        return imageUri;
+      }
+      
       const filename = `task_image_${Date.now()}.jpg`;
       const directory = `${FileSystem.documentDirectory}task_images/`;
       

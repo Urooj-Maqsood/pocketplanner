@@ -38,7 +38,7 @@ export default function SettingsScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const [showPrayerSettings, setShowPrayerSettings] = useState(false);
   const [showImageTaskLogger, setShowImageTaskLogger] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
@@ -622,17 +622,6 @@ export default function SettingsScreen() {
               <View style={styles.settingContent}>
                 <ThemedText style={styles.settingTitle}>🕌 Prayer & Mindfulness</ThemedText>
                 <ThemedText style={styles.settingSubtitle}>Namaz reminders and breathing exercises</ThemedText>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.settingItem}
-              onPress={() => setShowImageTaskLogger(true)}
-            >
-              <View style={styles.settingContent}>
-                <ThemedText style={styles.settingTitle}>📸 Image Task Logger</ThemedText>
-                <ThemedText style={styles.settingSubtitle}>Create visual tasks with images</ThemedText>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
