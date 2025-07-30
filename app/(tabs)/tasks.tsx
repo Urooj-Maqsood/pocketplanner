@@ -451,15 +451,28 @@ export default function TasksScreen() {
           onPress: async () => {
             try {
               // Cancel notifications for this task
-              await cancelTaskNotifications(taskId);
+              try {
+                await cancelTaskNotifications(taskId);
+              } catch (notificationError) {
+                console.log('Notification cancellation failed, continuing with delete');
+              }
 
+              // Remove from storage
               const tasksData = await AsyncStorage.getItem('tasks');
               const allTasks = tasksData ? JSON.parse(tasksData) : [];
               const updatedTasks = allTasks.filter((task: Task) => task.id !== taskId);
               await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
+              
+              // Update local state
               setTasks(prev => prev.filter(task => task.id !== taskId));
+              
+              // Reload tasks to ensure consistency
+              await loadTasks();
+              
+              Alert.alert('Success', 'Task deleted successfully!');
             } catch (error) {
               console.error('Error deleting task:', error);
+              Alert.alert('Error', 'Failed to delete task. Please try again.');
             }
           },
         },
@@ -1467,16 +1480,18 @@ export default function TasksScreen() {
           }}
         />
 
-      <NotificationSettingsModal
-        visible={showNotificationSettings}
-        onClose={() => {
-          setShowNotificationSettings(false);
-          // Refresh notification state when modal closes
-          setTimeout(() => {
-            loadTasks();
-          }, 200);
-        }}
-      />
+      {showNotificationSettings && (
+        <NotificationSettingsModal
+          visible={showNotificationSettings}
+          onClose={() => {
+            setShowNotificationSettings(false);
+            // Refresh notification state when modal closes
+            setTimeout(() => {
+              loadTasks();
+            }, 200);
+          }}
+        />
+      )}
 
       <MicroCommitmentModal
         visible={showMicroCommitmentModal}

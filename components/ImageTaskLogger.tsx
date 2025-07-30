@@ -80,36 +80,46 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
   };
 
   const pickImage = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
+    try {
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please grant camera permissions to use this feature.');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant camera permissions to use this feature.');
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -161,22 +171,29 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
       await saveImageTasks(updatedTasks);
 
       // Add to regular tasks as well
-      const regularTasks = await AsyncStorage.getItem('tasks');
-      const tasks = regularTasks ? JSON.parse(regularTasks) : [];
-      
-      const regularTask = {
-        id: newTask.id,
-        title: newTask.title,
-        description: `📸 ${newTask.description}`,
-        completed: false,
-        priority: newTask.priority,
-        created: newTask.created,
-        hasImage: true,
-        imageUri: newTask.imageUri,
-      };
+      try {
+        const regularTasks = await AsyncStorage.getItem('tasks');
+        const tasks = regularTasks ? JSON.parse(regularTasks) : [];
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        const regularTask = {
+          id: newTask.id,
+          title: newTask.title,
+          description: `📸 ${newTask.description}`,
+          completed: false,
+          priority: newTask.priority,
+          date: today,
+          created: newTask.created,
+          hasImage: true,
+          imageUri: newTask.imageUri,
+        };
 
-      tasks.push(regularTask);
-      await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+        tasks.push(regularTask);
+        await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+      } catch (taskError) {
+        console.log('Regular task creation failed, but image task was created');
+      }
 
       // Reset form
       setSelectedImage(null);
