@@ -75,7 +75,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!profile.username.trim()) {
       Alert.alert('Error', 'Username is required.');
       return;
@@ -85,10 +85,13 @@ export default function ProfileScreen() {
       return;
     }
     
-    // Show loading state
-    Alert.alert('Saving...', 'Please wait while we update your profile.');
-    saveProfile(profile);
-    setIsEditing(false);
+    try {
+      await saveProfile(profile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile changes.');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -132,7 +135,7 @@ export default function ProfileScreen() {
         const newProfile = { ...profile, profileImage: result.assets[0].uri };
         setProfile(newProfile);
         if (!isEditing) {
-          saveProfile(newProfile);
+          await saveProfile(newProfile);
         }
       }
     } catch (error) {
@@ -159,7 +162,7 @@ export default function ProfileScreen() {
         const newProfile = { ...profile, profileImage: result.assets[0].uri };
         setProfile(newProfile);
         if (!isEditing) {
-          saveProfile(newProfile);
+          await saveProfile(newProfile);
         }
       }
     } catch (error) {
@@ -181,12 +184,25 @@ export default function ProfileScreen() {
     );
   };
 
-  const removePhoto = () => {
-    const newProfile = { ...profile, profileImage: undefined };
-    setProfile(newProfile);
-    if (!isEditing) {
-      saveProfile(newProfile);
-    }
+  const removePhoto = async () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const newProfile = { ...profile, profileImage: undefined };
+            setProfile(newProfile);
+            if (!isEditing) {
+              await saveProfile(newProfile);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleChangePassword = () => {

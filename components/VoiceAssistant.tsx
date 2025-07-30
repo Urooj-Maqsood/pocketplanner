@@ -206,7 +206,7 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
     Alert.alert('Voice Commands', commands);
   };
 
-  const startListening = () => {
+  const startListening = async () => {
     if (!isSupported) {
       Alert.alert(
         'Voice Assistant', 
@@ -215,9 +215,47 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
       return;
     }
     
+    // Check microphone permission first
+    try {
+      if (Platform.OS === 'web' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Permission granted, stop the stream
+          stream.getTracks().forEach(track => track.stop());
+        } catch (permissionError) {
+          Alert.alert(
+            'Microphone Permission Required',
+            'Please allow microphone access to use voice commands. You may need to click the microphone icon in your browser\'s address bar.',
+            [
+              { text: 'Cancel' },
+              { 
+                text: 'Help', 
+                onPress: () => Alert.alert(
+                  'Enable Microphone',
+                  '1. Look for a microphone icon in your browser\'s address bar\n2. Click it and select "Allow"\n3. Try the voice command again\n\nOr check your browser settings for microphone permissions.'
+                )
+              }
+            ]
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+    }
+    
     if (recognition && !isListening) {
-      setIsListening(true);
-      recognition.start();
+      try {
+        setIsListening(true);
+        recognition.start();
+      } catch (error) {
+        console.error('Failed to start recognition:', error);
+        setIsListening(false);
+        Alert.alert(
+          'Voice Recognition Error',
+          'Failed to start voice recognition. Please check your microphone permissions and try again.'
+        );
+      }
     }
   };
 

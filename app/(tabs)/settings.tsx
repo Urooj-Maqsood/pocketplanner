@@ -1,13 +1,13 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  RefreshControl,
   Switch,
+  Alert,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { initializeNotifications } from '@/services/notificationService';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
 import ThemeToggle from '@/components/ThemeToggle';
 import TaskCategories from '@/components/TaskCategories';
@@ -149,14 +148,84 @@ export default function SettingsScreen() {
 
   const toggleTwoFactor = async (value: boolean) => {
     try {
-      setTwoFactorEnabled(value);
-      await AsyncStorage.setItem('twoFactorEnabled', JSON.stringify(value));
+      if (value) {
+        // Show setup flow for 2FA
+        Alert.alert(
+          'Setup Two-Factor Authentication',
+          'Would you like to enable 2FA with SMS or Email verification?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'SMS', onPress: () => setup2FA('sms') },
+            { text: 'Email', onPress: () => setup2FA('email') },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Disable Two-Factor Authentication',
+          'Are you sure you want to disable 2FA? This will make your account less secure.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Disable', 
+              style: 'destructive',
+              onPress: async () => {
+                setTwoFactorEnabled(false);
+                await AsyncStorage.setItem('twoFactorEnabled', JSON.stringify(false));
+                Alert.alert('Success', 'Two-factor authentication has been disabled.');
+              }
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling two-factor settings:', error);
+    }
+  };
+
+  const setup2FA = async (method: 'sms' | 'email') => {
+    try {
+      // Generate a verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
       Alert.alert(
-        'Two-Factor Authentication',
-        value ? 'Two-factor authentication enabled' : 'Two-factor authentication disabled'
+        'Verification Required',
+        `We've sent a verification code to your ${method}. Enter the code below.\n\nFor demo: ${verificationCode}`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Verify',
+            onPress: () => {
+              Alert.prompt(
+                'Enter Verification Code',
+                'Please enter the 6-digit code:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Verify',
+                    onPress: (code) => {
+                      if (code === verificationCode) {
+                        setTwoFactorEnabled(true);
+                        AsyncStorage.setItem('twoFactorEnabled', JSON.stringify(true));
+                        AsyncStorage.setItem('twoFactorMethod', method);
+                        Alert.alert('Success', 'Two-factor authentication has been enabled!');
+                      } else {
+                        Alert.alert('Error', 'Invalid verification code. Please try again.');
+                      }
+                    }
+                  }
+                ],
+                'plain-text'
+              );
+            }
+          }
+        ]
       );
     } catch (error) {
-      console.error('Error saving 2FA settings:', error);
+      console.error('Error setting up 2FA:', error);
+      Alert.alert('Error', 'Failed to setup two-factor authentication.');
     }
   };
 
