@@ -38,7 +38,7 @@ export default function SettingsScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  
   const [showPrayerSettings, setShowPrayerSettings] = useState(false);
   const [showImageTaskLogger, setShowImageTaskLogger] = useState(false);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
@@ -602,16 +602,18 @@ export default function SettingsScreen() {
          <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>App Settings</ThemedText>
 
-            <TouchableOpacity 
-              style={styles.settingItem}
-              onPress={() => setShowNotificationSettings(true)}
-            >
+            <View style={styles.settingItem}>
               <View style={styles.settingContent}>
                 <ThemedText style={styles.settingTitle}>🔔 Notifications</ThemedText>
-                <ThemedText style={styles.settingSubtitle}>Manage alerts and reminders</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>Enable task reminders and alerts</ThemedText>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={toggleNotifications}
+                trackColor={{ false: '#ccc', true: '#74b9ff' }}
+                thumbColor="#fff"
+              />
+            </View>
 
             <TouchableOpacity 
               style={styles.settingItem}
@@ -650,12 +652,6 @@ export default function SettingsScreen() {
       <TaskCategories
         visible={showCategories}
         onClose={() => setShowCategories(false)}
-      />
-
-      {/* Notification Settings Modal */}
-      <NotificationSettings
-        visible={showNotificationSettings}
-        onClose={() => setShowNotificationSettings(false)}
       />
 
       {/* Prayer & Mindfulness Settings Modal */}
