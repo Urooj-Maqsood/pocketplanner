@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "pocketplanner",
     "userInterfaceStyle": "automatic",
-    
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +15,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.tayabaa.pocketplanner"
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +45,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0fe664b8-a43c-4782-9bb0-53ae3943f7a3"
+      }
     }
   }
 }
