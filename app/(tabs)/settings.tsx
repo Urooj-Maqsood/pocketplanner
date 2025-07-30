@@ -143,14 +143,58 @@ export default function SettingsScreen() {
 
   const toggleBiometric = async (value: boolean) => {
     try {
-      setBiometricEnabled(value);
-      await AsyncStorage.setItem('biometricEnabled', JSON.stringify(value));
-      Alert.alert(
-        'Biometric Authentication',
-        value ? 'Biometric authentication enabled' : 'Biometric authentication disabled'
-      );
+      if (Platform.OS === 'web') {
+        // For web, just toggle the setting without biometric check
+        setBiometricEnabled(value);
+        await AsyncStorage.setItem('biometricEnabled', JSON.stringify(value));
+        Alert.alert(
+          value ? 'Enabled' : 'Disabled', 
+          value 
+            ? 'Biometric login preference saved. Note: Full biometric authentication is available on mobile devices.' 
+            : 'Biometric authentication has been disabled.'
+        );
+        return;
+      }
+
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      if (!compatible) {
+        Alert.alert('Not Supported', 'Biometric authentication is not supported on this device.');
+        return;
+      }
+
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!enrolled) {
+        Alert.alert(
+          'No Biometrics Enrolled',
+          'Please set up biometric authentication in your device settings first.'
+        );
+        return;
+      }
+
+      if (value) {
+        // Test biometric authentication before enabling
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Verify your identity to enable biometric login',
+          fallbackLabel: 'Use Passcode',
+          cancelLabel: 'Cancel',
+          disableDeviceFallback: false,
+        });
+
+        if (result.success) {
+          setBiometricEnabled(true);
+          await AsyncStorage.setItem('biometricEnabled', JSON.stringify(true));
+          Alert.alert('Success', 'Biometric authentication has been enabled for login.');
+        } else {
+          Alert.alert('Authentication Failed', result.error || 'Biometric authentication was not successful.');
+        }
+      } else {
+        setBiometricEnabled(false);
+        await AsyncStorage.setItem('biometricEnabled', JSON.stringify(false));
+        Alert.alert('Disabled', 'Biometric authentication has been disabled.');
+      }
     } catch (error) {
-      console.error('Error saving biometric settings:', error);
+      console.error('Error toggling biometric settings:', error);
+      Alert.alert('Error', 'Failed to change biometric settings. Please try again.');
     }
   };
 
