@@ -22,6 +22,7 @@ import {
   cancelTaskNotifications,
   getNotificationSettings,
   cleanupExpiredNotifications,
+  sendTaskCompletionNotification,
 } from '@/services/notificationService';
 import SmartTaskSuggestions from '@/components/SmartTaskSuggestions';
 import MicroCommitmentModal from '@/components/MicroCommitmentModal';
@@ -190,7 +191,7 @@ export default function TasksScreen() {
         if (isEnabled) {
           // Initialize notifications
           await initializeNotifications();
-          
+
           // Load notification settings
           const settings = await getNotificationSettings();
           setNotificationReminderMinutes(settings.preStartMinutes);
@@ -366,51 +367,40 @@ export default function TasksScreen() {
 
   const toggleTask = async (taskId: string) => {
     try {
-      const tasksData = await AsyncStorage.getItem('tasks');
-      const allTasks = tasksData ? JSON.parse(tasksData) : [];
-
-      const taskToToggle = allTasks.find((task: Task) => task.id === taskId);
+      const taskToToggle = tasks.find(task => task.id === taskId);
       if (!taskToToggle) return;
 
-      const updatedTasks = allTasks.map((task: Task) => 
-        task.id === taskId ? { ...task, completed: !task.completed } : task
+      const updatedTasks = tasks.map(task =>
+        task.id === taskId ? { 
+          ...task, 
+          completed: !task.completed,
+          completedAt: !task.completed ? new Date().toISOString() : undefined
+        } : task
       );
 
-      // If completing a micro-task, show success message and update parent task
-      if (taskToToggle.isMicroTask && !taskToToggle.completed) {
-        // Find and update the parent task
-        const parentTaskId = taskToToggle.linkedToTaskId;
-        if (parentTaskId) {
-          const updatedTasksWithParent = updatedTasks.map((task: Task) => 
-            task.id === parentTaskId 
-              ? { ...task, hasMicroTaskActive: false }
-              : task
-          );
+      setTasks(updatedTasks);
+      await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
 
-          await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasksWithParent));
+      // Show completion notification and send push notification
+      if (!taskToToggle.completed) {
+        // Show alert
+        Alert.alert(
+          '✅ Task Completed!',
+          `Great job! You've completed "${taskToToggle.title}"`,
+          [{ text: 'Nice!', style: 'default' }]
+        );
 
-          // Show success toast
-          setTimeout(() => {
-            Alert.alert(
-              '✅ Micro-Win!',
-              "You're still on track! This micro-step keeps your momentum going.",
-              [{ text: 'Keep Going!', style: 'default' }]
-            );
-          }, 100);
+        // Send push notification if notifications are enabled
+        if (notificationsEnabled) {
+          try {
+            await sendTaskCompletionNotification(taskToToggle.title, taskId);
+          } catch (notificationError) {
+            console.log('Task completion notification failed:', notificationError);
+          }
         }
-      } else {
-        await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
       }
 
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      ));
-
-      // Reload tasks to reflect any parent task updates
-      setTimeout(() => {
-        loadTasks();
-      }, 200);
-
+      loadTasks(); // Refresh the view
     } catch (error) {
       console.error('Error toggling task:', error);
     }

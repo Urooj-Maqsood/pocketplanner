@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { createUser } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
+import OnboardingTutorial from '@/components/OnboardingTutorial';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignupScreen() {
   const [username, setUsername] = useState('');
@@ -24,6 +26,7 @@ export default function SignupScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   const router = useRouter();
   const { login } = useAuth();
@@ -92,21 +95,19 @@ export default function SignupScreen() {
         setPassword('');
         setConfirmPassword('');
         
-        // Login the user and navigate
+        // Login the user and check if onboarding needed
         await login(result.user);
         
-        Alert.alert(
-          'Welcome!',
-          'Account created successfully! Welcome to PocketPlanner.',
-          [
-            {
-              text: 'Get Started',
-              onPress: () => {
-                router.replace('/(tabs)');
-              },
-            },
-          ]
-        );
+        // Check if user has already seen onboarding
+        const hasSeenOnboarding = await AsyncStorage.getItem('userHasSeenOnboarding');
+        
+        if (hasSeenOnboarding === 'true') {
+          // User has seen onboarding before, go directly to main app
+          router.replace('/(tabs)');
+        } else {
+          // Show onboarding for new users
+          setShowOnboarding(true);
+        }
       } else {
         console.log('Signup failed:', result.message);
         Alert.alert('Signup Failed', result.message);
@@ -121,6 +122,11 @@ export default function SignupScreen() {
 
   const navigateToLogin = () => {
     router.back();
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    router.replace('/(tabs)');
   };
 
   return (
@@ -223,6 +229,12 @@ export default function SignupScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Onboarding for new users */}
+      <OnboardingTutorial 
+        visible={showOnboarding} 
+        onComplete={handleOnboardingComplete} 
+      />
     </KeyboardAvoidingView>
   );
 }

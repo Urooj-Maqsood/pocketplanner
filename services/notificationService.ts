@@ -526,6 +526,44 @@ export const snoozeNotification = async (
   }
 };
 
+// Send immediate task completion notification
+export const sendTaskCompletionNotification = async (taskTitle: string, taskId: string): Promise<void> => {
+  try {
+    if (isWebPlatform()) {
+      showWebNotification(
+        '🎉 Task Completed!',
+        `Congratulations! You've successfully completed "${taskTitle}"`
+      );
+      return;
+    }
+
+    if (isExpoGo() || !Device.isDevice) {
+      console.log('Task completion notification not supported in current environment');
+      return;
+    }
+
+    const settings = await getNotificationSettings();
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🎉 Task Completed!',
+        body: `Congratulations! You've successfully completed "${taskTitle}"`,
+        data: { taskId, type: 'task-completed' },
+        sound: settings.soundEnabled ? 'default' : false,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        vibrate: settings.vibrationEnabled ? [0, 250, 250, 250] : [],
+      },
+      trigger: {
+        seconds: 1, // Send immediately
+      },
+    });
+
+    console.log(`Task completion notification sent for: ${taskTitle}`);
+  } catch (error) {
+    console.error('Error sending task completion notification:', error);
+  }
+};
+
 // Get notification statistics
 export const getNotificationStats = async (): Promise<{
   totalScheduled: number;

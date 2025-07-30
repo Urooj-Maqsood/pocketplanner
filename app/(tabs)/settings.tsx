@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { initializeNotifications } from '@/services/notificationService';
 import * as Notifications from 'expo-notifications';
-import OnboardingTutorial from '@/components/OnboardingTutorial';
+
 import ThemeToggle from '@/components/ThemeToggle';
 import TaskCategories from '@/components/TaskCategories';
 import VoiceAssistant from '@/components/VoiceAssistant';
@@ -31,7 +31,7 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const [showCategories, setShowCategories] = useState(false);
   const { logout, user } = useAuth();
   const router = useRouter();
@@ -229,13 +229,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const showOnboardingTutorial = () => {
-    setShowOnboarding(true);
-  };
 
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-  };
 
   const openCategories = () => {
     setShowCategories(true);
@@ -404,13 +398,6 @@ export default function SettingsScreen() {
         {/* App Features */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>App Features</ThemedText>
-
-          <SettingItem
-            icon="help-circle"
-            title="Tutorial & Onboarding"
-            subtitle="View the app tutorial again"
-            onPress={showOnboardingTutorial}
-          />
 
           <SettingItem
             icon="color-palette"
@@ -614,11 +601,6 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Modals */}
-      <OnboardingTutorial 
-        visible={showOnboarding} 
-        onComplete={handleOnboardingComplete} 
-      />
-
       <TaskCategories
         visible={showCategories}
         onClose={() => setShowCategories(false)}
