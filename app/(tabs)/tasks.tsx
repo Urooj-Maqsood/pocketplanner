@@ -415,6 +415,16 @@ export default function TasksScreen() {
     setShowMicroCommitmentModal(true);
   };
 
+  const handleTaskCreated = (newTask: any) => {
+    // Reload tasks to show the newly created task
+    loadTasks();
+  };
+
+  const handleTaskCompleted = (taskId: string) => {
+    // Toggle the task completion
+    toggleTask(taskId);
+  };
+
   const handleMicroTaskCreated = (microTask: Task) => {
     // Reload tasks to show the new micro-task
     loadTasks();
