@@ -25,6 +25,8 @@ import {
   sendTaskCompletionNotification,
 } from '@/services/notificationService';
 import SmartTaskSuggestions from '@/components/SmartTaskSuggestions';
+import VoiceAssistant from '@/components/VoiceAssistant';
+import ImageTaskLogger from '@/components/ImageTaskLogger';
 import MicroCommitmentModal from '@/components/MicroCommitmentModal';
 
 interface Task {
@@ -95,6 +97,8 @@ export default function TasksScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showMicroCommitmentModal, setShowMicroCommitmentModal] = useState(false);
   const [selectedTaskForMicro, setSelectedTaskForMicro] = useState<Task | null>(null);
+  const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
+  const [showImageTaskLogger, setShowImageTaskLogger] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
 
@@ -862,7 +866,8 @@ export default function TasksScreen() {
               </ThemedText>
               <View style={[styles.priorityBadge, styles[`priority${calculateTaskPriority({ importance: newTaskImportance, urgency: newTaskUrgency } as Task).charAt(0).toUpperCase() + calculateTaskPriority({ importance: newTaskImportance, urgency: newTaskUrgency } as Task).slice(1)}Badge`]]}>
                 <ThemedText style={styles.priorityBadgeText}>
-                  {calculateTaskPriority({ importance: newTaskImportance, urgency: newTaskUrgency } as Task).toUpperCase()} PRIORITY
+                  {calculateTaskPriority({ importance: newTaskImportance, urgency: newTaskUrgency } as Task).toUpperCase()}```python
+ PRIORITY
                 </ThemedText>
               </View>
             </View>
@@ -880,6 +885,19 @@ export default function TasksScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>Today's Tasks</ThemedText>
+          <TouchableOpacity
+            style={styles.voiceButton}
+            onPress={() => setShowVoiceAssistant(true)}
+          >
+            <ThemedText style={styles.voiceButtonText}>🎤 Voice</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.voiceButton, { backgroundColor: '#e17055' }]}
+            onPress={() => setShowImageTaskLogger(true)}
+          >
+            <ThemedText style={styles.voiceButtonText}>📸 Image</ThemedText>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.breakdownButton}
             onPress={() => setShowBreakdownTasks(!showBreakdownTasks)}
@@ -904,12 +922,12 @@ export default function TasksScreen() {
 
             return (
               <View key={task.id} style={[
-                styles.taskItem, 
-                priorityStyle, 
+                styles.taskItem,
+                priorityStyle,
                 isMicroTask && styles.microTaskItem,
                 hasMicroTaskActive && styles.parentTaskWithMicro
               ]}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.taskCheckbox}
                   onPress={() => toggleTask(task.id)}
                 >
@@ -921,7 +939,7 @@ export default function TasksScreen() {
                   <View style={styles.taskTitleRow}>
                     {isMicroTask && <ThemedText style={styles.microTaskIcon}>🔁</ThemedText>}
                     <ThemedText style={[
-                      styles.taskText, 
+                      styles.taskText,
                       task.completed && styles.taskTextCompleted,
                       isMicroTask && styles.microTaskText
                     ]}>
@@ -947,7 +965,7 @@ export default function TasksScreen() {
                     </ThemedText>
                   )}
                   <ThemedText style={[styles.taskPriority, { color: priority === 'high' ? '#e74c3c' : priority === 'medium' ? '#f39c12' : '#27ae60' }]}>
-                    {priority === 'high' ? '🔴 High Priority' : 
+                    {priority === 'high' ? '🔴 High Priority' :
                      priority === 'medium' ? '🟡 Medium Priority' : '🟢 Low Priority'}
                   </ThemedText>
                   {task.focusType && (
@@ -961,20 +979,20 @@ export default function TasksScreen() {
                 </View>
                 <View style={styles.taskActions}>
                   {!isMicroTask && !task.completed && !hasMicroTaskActive && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.microCommitmentButton}
                       onPress={() => handleMicroCommitmentOffer(task)}
                     >
                       <ThemedText style={styles.microCommitmentButtonText}>🔄</ThemedText>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => openEditTask(task)}
                   >
                     <ThemedText style={styles.editButtonText}>✎</ThemedText>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => deleteTask(task.id)}
                   >
@@ -1014,7 +1032,7 @@ export default function TasksScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>Time Blocks</ThemedText>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addTimeBlockButton}
             onPress={() => setShowTimeBlockModal(true)}
           >
@@ -1044,7 +1062,7 @@ export default function TasksScreen() {
                   </View>
                 )}
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => deleteTimeBlock(block.id)}
               >
@@ -1062,23 +1080,23 @@ export default function TasksScreen() {
         presentationStyle="pageSheet"
       >
         <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardAvoidingView}
           >
             <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle" style={styles.modalTitle}>Add Time Block</ThemedText>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => {
                   setShowTimeBlockModal(false);
-                  setNewTimeBlock({ 
-                    title: '', 
-                    startTime: '', 
-                    endTime: '', 
-                    date: new Date().toISOString().split('T')[0], 
-                    linkedTaskId: '' 
+                  setNewTimeBlock({
+                    title: '',
+                    startTime: '',
+                    endTime: '',
+                    date: new Date().toISOString().split('T')[0],
+                    linkedTaskId: ''
                   });
                 }}
               >
@@ -1086,7 +1104,7 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
               style={styles.modalScrollContent}
               contentContainerStyle={styles.modalScrollContainer}
               showsVerticalScrollIndicator={true}
@@ -1106,7 +1124,7 @@ export default function TasksScreen() {
 
             <View style={styles.taskSelectionSection}>
               <ThemedText style={styles.taskLinkLabel}>Select Task (Optional)</ThemedText>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.taskDropdown}
                 onPress={() => {
                   const taskOptions = ['Custom Time Block', ...tasks.map(task => task.title)];
@@ -1120,16 +1138,16 @@ export default function TasksScreen() {
                         onPress: () => {
                           if (index === 0) {
                             // "Custom Time Block" option selected
-                            setNewTimeBlock(prev => ({ 
-                              ...prev, 
+                            setNewTimeBlock(prev => ({
+                              ...prev,
                               linkedTaskId: '',
                               title: prev.title || 'Custom Time Block'
                             }));
                           } else {
                             // Task selected
                             const selectedTask = tasks[index - 1];
-                            setNewTimeBlock(prev => ({ 
-                              ...prev, 
+                            setNewTimeBlock(prev => ({
+                              ...prev,
                               linkedTaskId: selectedTask.id,
                               title: selectedTask.title
                             }));
@@ -1145,7 +1163,7 @@ export default function TasksScreen() {
                 }}
               >
                 <ThemedText style={styles.taskDropdownText}>
-                  {newTimeBlock.linkedTaskId 
+                  {newTimeBlock.linkedTaskId
                     ? `📋 ${tasks.find(task => task.id === newTimeBlock.linkedTaskId)?.title || 'Select Task'}`
                     : '➕ Select Task or Create Custom'}
                 </ThemedText>
@@ -1184,7 +1202,7 @@ export default function TasksScreen() {
                 keyboardType="numeric"
                 maxLength={10}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.todayButton}
                 onPress={() => {
                   const today = new Date().toISOString().split('T')[0];
@@ -1216,8 +1234,8 @@ export default function TasksScreen() {
                     }
 
                     const currentPeriod = newTimeBlock.startTime.match(/(AM|PM)/i)?.[0] || 'AM';
-                    setNewTimeBlock(prev => ({ 
-                      ...prev, 
+                    setNewTimeBlock(prev => ({
+                      ...prev,
                       startTime: formatted + (formatted ? ` ${currentPeriod}` : '')
                     }));
                   }}
@@ -1233,8 +1251,8 @@ export default function TasksScreen() {
                     ]}
                     onPress={() => {
                       const timeOnly = newTimeBlock.startTime.replace(/ (AM|PM)/i, '');
-                      setNewTimeBlock(prev => ({ 
-                        ...prev, 
+                      setNewTimeBlock(prev => ({
+                        ...prev,
                         startTime: timeOnly + (timeOnly ? ' AM' : '')
                       }));
                     }}
@@ -1251,8 +1269,8 @@ export default function TasksScreen() {
                     ]}
                     onPress={() => {
                       const timeOnly = newTimeBlock.startTime.replace(/ (AM|PM)/i, '');
-                      setNewTimeBlock(prev => ({ 
-                        ...prev, 
+                      setNewTimeBlock(prev => ({
+                        ...prev,
                         startTime: timeOnly + (timeOnly ? ' PM' : '')
                       }));
                     }}
@@ -1286,8 +1304,8 @@ export default function TasksScreen() {
 
                     // Keep existing AM/PM or default to PM
                     const currentPeriod = newTimeBlock.endTime.match(/(AM|PM)/gi)?.[0] || 'PM';
-                    setNewTimeBlock(prev => ({ 
-                      ...prev, 
+                    setNewTimeBlock(prev => ({
+                      ...prev,
                       endTime: formatted ? formatted + ' ' + currentPeriod : ''
                     }));
                   }}
@@ -1303,8 +1321,8 @@ export default function TasksScreen() {
                     ]}
                     onPress={() => {
                       const timeOnly = newTimeBlock.endTime.replace(/ (AM|PM)/i, '');
-                      setNewTimeBlock(prev => ({ 
-                        ...prev, 
+                      setNewTimeBlock(prev => ({
+                        ...prev,
                         endTime: timeOnly + (timeOnly ? ' AM' : '')
                       }));
                     }}
@@ -1321,8 +1339,8 @@ export default function TasksScreen() {
                     ]}
                     onPress={() => {
                       const timeOnly = newTimeBlock.endTime.replace(/ (AM|PM)/i, '');
-                      setNewTimeBlock(prev => ({ 
-                        ...prev, 
+                      setNewTimeBlock(prev => ({
+                        ...prev,
                         endTime: timeOnly + (timeOnly ? ' PM' : '')
                       }));
                     }}
@@ -1342,7 +1360,7 @@ export default function TasksScreen() {
                 <ThemedText style={styles.linkedTaskText}>
                   🔗 Linked to: {tasks.find(task => task.id === newTimeBlock.linkedTaskId)?.title}
                 </ThemedText>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.clearTaskLink}
                   onPress={() => setNewTimeBlock(prev => ({ ...prev, linkedTaskId: '', title: '' }))}
                 >
@@ -1352,23 +1370,23 @@ export default function TasksScreen() {
             )}
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => {
                   setShowTimeBlockModal(false);
-                  setNewTimeBlock({ 
-                    title: '', 
-                    startTime: '', 
-                    endTime: '', 
-                    date: new Date().toISOString().split('T')[0], 
-                    linkedTaskId: '' 
+                  setNewTimeBlock({
+                    title: '',
+                    startTime: '',
+                    endTime: '',
+                    date: new Date().toISOString().split('T')[0],
+                    linkedTaskId: ''
                   });
                 }}
               >
                 <ThemedText style={styles.modalCancelButtonText}>Cancel</ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalAddButton}
                 onPress={addTimeBlock}
               >
@@ -1400,7 +1418,7 @@ export default function TasksScreen() {
             />
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => {
                   setShowEditModal(false);
@@ -1411,7 +1429,7 @@ export default function TasksScreen() {
                 <ThemedText style={styles.modalCancelButtonText}>Cancel</ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalAddButton}
                 onPress={saveEditTask}
               >
@@ -1421,6 +1439,23 @@ export default function TasksScreen() {
           </View>
         </View>
       </Modal>
+
+      <VoiceAssistant
+          visible={showVoiceAssistant}
+          onClose={() => setShowVoiceAssistant(false)}
+          onTaskCreated={handleTaskCreated}
+          onTaskCompleted={handleTaskCompleted}
+        />
+
+        <ImageTaskLogger
+          visible={showImageTaskLogger}
+          onClose={() => setShowImageTaskLogger(false)}
+          onTaskCreated={(imageTask) => {
+            // Refresh tasks to show newly created image task
+            loadTasks();
+            setShowImageTaskLogger(false);
+          }}
+        />
 
       <NotificationSettingsModal
         visible={showNotificationSettings}
@@ -1695,6 +1730,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 11,
     fontWeight: 'bold',
+  },
+    voiceButton: {
+    backgroundColor: '#27ae60',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   emptyText: {
     color: '#999',

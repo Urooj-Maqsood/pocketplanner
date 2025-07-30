@@ -21,6 +21,8 @@ import * as Notifications from 'expo-notifications';
 import ThemeToggle from '@/components/ThemeToggle';
 import TaskCategories from '@/components/TaskCategories';
 import VoiceAssistant from '@/components/VoiceAssistant';
+import PrayerMindfulnessReminders from '@/components/PrayerMindfulnessReminders';
+import ImageTaskLogger from '@/components/ImageTaskLogger';
 
 export default function SettingsScreen() {
   const [totalTasks, setTotalTasks] = useState(0);
@@ -36,6 +38,12 @@ export default function SettingsScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showPrayerSettings, setShowPrayerSettings] = useState(false);
+  const [showImageTaskLogger, setShowImageTaskLogger] = useState(false);
+  const [sessionsCompleted, setSessionsCompleted] = useState(0);
+  const [tasksCompleted, setTasksCompleted] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
 
   useEffect(() => {
     loadStats();
@@ -590,6 +598,44 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+         {/* App Settings */}
+         <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>App Settings</ThemedText>
+
+            <TouchableOpacity 
+              style={styles.settingItem}
+              onPress={() => setShowNotificationSettings(true)}
+            >
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>🔔 Notifications</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>Manage alerts and reminders</ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.settingItem}
+              onPress={() => setShowPrayerSettings(true)}
+            >
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>🕌 Prayer & Mindfulness</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>Namaz reminders and breathing exercises</ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.settingItem}
+              onPress={() => setShowImageTaskLogger(true)}
+            >
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>📸 Image Task Logger</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>Create visual tasks with images</ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+</View>
+
         {/* App Info */}
         <View style={[styles.section, styles.lastSection]}>
           <ThemedText style={styles.sectionTitle}>About</ThemedText>
@@ -604,6 +650,28 @@ export default function SettingsScreen() {
       <TaskCategories
         visible={showCategories}
         onClose={() => setShowCategories(false)}
+      />
+
+      {/* Notification Settings Modal */}
+      <NotificationSettings
+        visible={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
+      />
+
+      {/* Prayer & Mindfulness Settings Modal */}
+      <PrayerMindfulnessReminders
+        visible={showPrayerSettings}
+        onClose={() => setShowPrayerSettings(false)}
+      />
+
+      {/* Image Task Logger Modal */}
+      <ImageTaskLogger
+        visible={showImageTaskLogger}
+        onClose={() => setShowImageTaskLogger(false)}
+        onTaskCreated={(task) => {
+          console.log('New image task created:', task);
+          // Optionally refresh tasks or show success message
+        }}
       />
     </ThemedView>
   );
@@ -806,5 +874,9 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
     paddingLeft: 10,
+  },
+  settingContent: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
 });
