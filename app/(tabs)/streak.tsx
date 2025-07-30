@@ -57,6 +57,9 @@ export default function StreakScreen() {
       const allTasks = JSON.parse(tasksData);
       const todayTasksList = allTasks.filter((task: Task) => task.date === today);
 
+      console.log('Today tasks:', todayTasksList.length);
+      console.log('Completed tasks:', todayTasksList.filter(t => t.completed).length);
+
       // Check if all tasks are completed OR if any micro-tasks linked to incomplete tasks are completed
       let allTasksCompleted = todayTasksList.length > 0 && todayTasksList.every((task: Task) => task.completed);
 
@@ -96,6 +99,13 @@ export default function StreakScreen() {
 
         await AsyncStorage.setItem('streakData', JSON.stringify(newStreakData));
         setStreakData(newStreakData);
+
+        // Show completion notification
+        Alert.alert(
+          '🎉 All Tasks Completed!',
+          `Great job! You've completed all your tasks for today. Current streak: ${newStreakData.currentStreak} days!`,
+          [{ text: 'Awesome!', style: 'default' }]
+        );
       }
     } catch (error) {
       console.error('Error updating streak:', error);

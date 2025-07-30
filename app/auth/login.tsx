@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,15 +14,33 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authenticateUser } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import BiometricAuth from '@/components/BiometricAuth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   const router = useRouter();
   const { login } = useAuth();
+
+  useEffect(() => {
+    checkBiometricSettings();
+  }, []);
+
+  const checkBiometricSettings = async () => {
+    try {
+      const biometricSettings = await AsyncStorage.getItem('biometricEnabled');
+      if (biometricSettings) {
+        setBiometricEnabled(JSON.parse(biometricSettings));
+      }
+    } catch (error) {
+      console.error('Error checking biometric settings:', error);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -46,6 +64,8 @@ export default function LoginScreen() {
       if (result.success && result.user) {
         console.log('Login successful, navigating to main app');
         await login(result.user);
+        // Save user for biometric login
+        await AsyncStorage.setItem('lastLoggedUser', JSON.stringify(result.user));
         router.replace('/(tabs)');
       } else {
         console.log('Login failed:', result.message);
@@ -57,6 +77,26 @@ export default function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBiometricSuccess = async () => {
+    try {
+      // Get the last logged-in user for biometric login
+      const lastUser = await AsyncStorage.getItem('lastLoggedUser');
+      if (lastUser) {
+        const userData = JSON.parse(lastUser);
+        await login(userData);
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', 'No previous login found. Please login with email and password first.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Biometric login failed. Please try again.');
+    }
+  };
+
+  const handleBiometricError = (error: string) => {
+    Alert.alert('Biometric Authentication Failed', error);
   };
 
   const navigateToSignup = () => {
@@ -120,6 +160,12 @@ export default function LoginScreen() {
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Text>
           </TouchableOpacity>
+
+          <BiometricAuth
+            enabled={biometricEnabled}
+            onAuthenticationSuccess={handleBiometricSuccess}
+            onAuthenticationError={handleBiometricError}
+          />
 
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>

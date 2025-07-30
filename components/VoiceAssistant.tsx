@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sendTaskCompletionNotification } from '@/services/notificationService';
 
 interface VoiceAssistantProps {
   onTaskCreated?: (task: any) => void;
@@ -49,6 +50,9 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
       };
       
       setRecognition(recognitionInstance);
+    } else if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      // For mobile, show alternative input method
+      setIsSupported(true);
     } else {
       setIsSupported(false);
     }
@@ -161,6 +165,13 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
         onTaskCompleted(tasks[taskIndex].id);
       }
       
+      // Send completion notification
+      try {
+        await sendTaskCompletionNotification(tasks[taskIndex].title, tasks[taskIndex].id);
+      } catch (notificationError) {
+        console.log('Task completion notification failed:', notificationError);
+      }
+      
       Alert.alert('Voice Assistant', `Task "${tasks[taskIndex].title}" marked as complete!`);
     } catch (error) {
       console.error('Error completing task from voice:', error);
@@ -214,8 +225,29 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
       );
       return;
     }
+
+    // For mobile devices, show text input alternative
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Alert.prompt(
+        'Voice Command',
+        'Enter your command (e.g., "add task buy groceries", "complete task homework", "list tasks"):',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Execute',
+            onPress: (text) => {
+              if (text) {
+                handleVoiceCommand(text.toLowerCase());
+              }
+            }
+          }
+        ],
+        'plain-text'
+      );
+      return;
+    }
     
-    // Check microphone permission first
+    // Check microphone permission first for web
     try {
       if (Platform.OS === 'web' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
@@ -293,7 +325,7 @@ export default function VoiceAssistant({ onTaskCreated, onTaskCompleted }: Voice
           color={isListening ? "#fff" : "#6c5ce7"} 
         />
         <Text style={[styles.buttonText, isListening && styles.listeningText]}>
-          {isListening ? 'Listening...' : 'Voice Commands'}
+          {isListening ? 'Listening...' : Platform.OS === 'web' ? 'Voice Commands' : 'Voice/Text Commands'}
         </Text>
       </TouchableOpacity>
       
