@@ -79,6 +79,7 @@ export default function OnboardingTutorial({ visible, onComplete }: OnboardingTu
   const handleComplete = async () => {
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
+      await AsyncStorage.setItem('userHasSeenOnboarding', 'true');
       onComplete();
     } catch (error) {
       console.error('Error saving onboarding completion:', error);
