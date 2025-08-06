@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,7 +14,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
-import * as ImagePicker from 'expo-image-picker';
+// Image functionality temporarily disabled for web compatibility
+// import * as ImagePicker from 'expo-image-picker';
+// import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system';
 
 interface ImageTask {
@@ -71,56 +72,16 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
   };
 
   const requestPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please grant camera roll permissions to use this feature.');
-      return false;
-    }
-    return true;
+    // Image functionality disabled for web compatibility
+    return false;
   };
 
   const pickImage = async () => {
-    try {
-      const hasPermission = await requestPermissions();
-      if (!hasPermission) return;
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
-    }
+    Alert.alert('Feature Unavailable', 'Image functionality is currently disabled for better web compatibility.');
   };
 
   const takePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant camera permissions to use this feature.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
-    }
+    Alert.alert('Feature Unavailable', 'Camera functionality is currently disabled for better web compatibility.');
   };
 
   const saveImageToDirectory = async (imageUri: string): Promise<string> => {
@@ -129,19 +90,19 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
       if (typeof window !== 'undefined') {
         return imageUri;
       }
-      
+
       const filename = `task_image_${Date.now()}.jpg`;
       const directory = `${FileSystem.documentDirectory}task_images/`;
-      
+
       // Create directory if it doesn't exist
       await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-      
+
       const newPath = `${directory}${filename}`;
       await FileSystem.copyAsync({
         from: imageUri,
         to: newPath,
       });
-      
+
       return newPath;
     } catch (error) {
       console.error('Error saving image:', error);
@@ -179,9 +140,9 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
       try {
         const regularTasks = await AsyncStorage.getItem('tasks');
         const tasks = regularTasks ? JSON.parse(regularTasks) : [];
-        
+
         const today = new Date().toISOString().split('T')[0];
-        
+
         const regularTask = {
           id: newTask.id,
           title: newTask.title,
@@ -249,7 +210,7 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
           style: 'destructive',
           onPress: async () => {
             const taskToDelete = imageTasks.find(t => t.id === taskId);
-            
+
             // Delete image file
             if (taskToDelete?.imageUri.startsWith(FileSystem.documentDirectory || '')) {
               try {
@@ -314,26 +275,19 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
 
               {/* Image Selection */}
               <View style={styles.imageSection}>
-                {selectedImage ? (
-                  <View style={styles.selectedImageContainer}>
-                    <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => setSelectedImage(null)}
-                    >
-                      <ThemedText style={styles.removeImageText}>×</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.imagePickerButtons}>
-                    <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
-                      <ThemedText style={styles.imageButtonText}>📷 Take Photo</ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-                      <ThemedText style={styles.imageButtonText}>🖼️ Choose Image</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                {selectedImage && (
+        <View style={styles.imageContainer}>
+          <Text style={styles.imageText}>Image selected: {selectedImage}</Text>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => {
+              setSelectedImage(null);
+            }}
+          >
+            <Ionicons name="close-circle" size={24} color="#ff4757" />
+          </TouchableOpacity>
+        </View>
+      )}
               </View>
 
               {/* Task Details */}
@@ -398,7 +352,7 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
                 >
                   <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.saveButton, isLoading && { opacity: 0.6 }]}
                   onPress={createImageTask}
@@ -436,18 +390,18 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
                     <Image source={{ uri: task.imageUri }} style={styles.taskImageView} />
                     <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(task.priority) }]} />
                   </View>
-                  
+
                   <View style={styles.taskContent}>
                     <ThemedText style={[styles.taskTitle, task.completed && styles.completedTask]}>
                       {task.title}
                     </ThemedText>
-                    
+
                     {task.description && (
                       <ThemedText style={styles.taskDescription}>
                         {task.description}
                       </ThemedText>
                     )}
-                    
+
                     <ThemedText style={styles.taskDate}>
                       Created: {new Date(task.created).toLocaleDateString()}
                     </ThemedText>
@@ -462,7 +416,7 @@ export default function ImageTaskLogger({ visible, onClose, onTaskCreated }: Ima
                         {task.completed ? '✓' : '○'}
                       </ThemedText>
                     </TouchableOpacity>
-                    
+
                     <TouchableOpacity
                       style={[styles.actionButton, styles.deleteButton]}
                       onPress={() => deleteImageTask(task.id)}
@@ -535,15 +489,22 @@ const styles = StyleSheet.create({
   imageSection: {
     marginBottom: 20,
   },
-  selectedImageContainer: {
+  imageContainer: {
+    marginTop: 10,
     position: 'relative',
-    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 8,
+  },
+  imageText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
   selectedImage: {
-    width: 200,
-    height: 150,
+    width: '100%',
+    height: 200,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
   },
   removeImageButton: {
     position: 'absolute',
@@ -740,3 +701,4 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 });
+import { Ionicons } from '@expo/vector-icons';

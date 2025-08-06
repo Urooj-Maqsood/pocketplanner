@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import NotificationSettingsModal from '@/components/NotificationSettings';
 import {
@@ -28,6 +27,7 @@ import SmartTaskSuggestions from '@/components/SmartTaskSuggestions';
 import VoiceAssistant from '@/components/VoiceAssistant';
 import ImageTaskLogger from '@/components/ImageTaskLogger';
 import MicroCommitmentModal from '@/components/MicroCommitmentModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Task {
   id: string;
@@ -465,17 +465,17 @@ export default function TasksScreen() {
               // Get all tasks from storage
               const tasksData = await AsyncStorage.getItem('tasks');
               const allTasks = tasksData ? JSON.parse(tasksData) : [];
-              
+
               // Filter out the task to delete from all tasks
               const updatedAllTasks = allTasks.filter((task: Task) => task.id !== taskId);
-              
+
               // Save updated tasks back to storage
               await AsyncStorage.setItem('tasks', JSON.stringify(updatedAllTasks));
-              
+
               // Update local state immediately
               const updatedLocalTasks = tasks.filter(task => task.id !== taskId);
               setTasks(updatedLocalTasks);
-              
+
               Alert.alert('Success', 'Task deleted successfully!');
             } catch (error) {
               console.error('Error deleting task:', error);
@@ -879,7 +879,7 @@ export default function TasksScreen() {
                 {[1, 2, 3, 4, 5].map(value => (
                   <TouchableOpacity
                     key={value}
-                    style={[styles.scaleButton, newTaskUrgency === value && styles.scaleButtonActive]}
+                    style={[styles.scaleButton,newTaskUrgency === value && styles.scaleButtonActive]}
                     onPress={() => setNewTaskUrgency(value)}                  >
                     <ThemedText style={[styles.scaleButtonText, newTaskUrgency === value && styles.scaleButtonTextActive]}>
                       {value}
